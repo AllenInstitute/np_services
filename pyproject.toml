@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "np-services"
+version = "0.1.0"
+description = "Tools for interfacing with devices and services used in Mindscope Neuropixels experiments at the Allen Institute."
+authors = ["bjhardcastle <ben.hardcastle@alleninstitute.org>"]
+readme = "README.md"
+packages = [{include = "np_services", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+requests = "*"
+np_config = "*"
+np_session = "*"
+np_logging = "*"
+backoff = "*"
+pyzmq = "*"
+fabric = "^2.7.1"
+pandas = "^1.5.3"
+pydantic = "^1.10.4"
+pip-tools = {version = "*", optional = true}
+isort = {version = "*", optional = true}
+mypy = {version = "*", optional = true}
+black = {version = "*", optional = true}
+pytest = {version = "*", optional = true}
+poetry = {version = "*", optional = true}
+
+[tool.poetry.extras]
+dev = [
+    "pip-tools", # convert pyproject.toml to requirements.txt
+    "isort", # sort imports
+    "mypy",
+    "black",
+    "pytest",
+    "poetry",
+]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
