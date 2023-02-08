@@ -1,17 +1,17 @@
 import argparse
 import json
 import logging
-import sys
-from pprint import pprint, pformat
-from socket import *
 import os
+import sys
+from pprint import pformat, pprint
+from socket import *
 
-import np_logging 
+import np_logging
 
 logger = np_logging.getLogger(__name__)
 
-R = {'mvr_request': ''}
-encoding = 'utf-8'
+R = {"mvr_request": ""}
+encoding = "utf-8"
 
 
 class ResponseBuffer:
@@ -26,20 +26,27 @@ class ResponseBuffer:
         self.read_buffer.extend(buf)
         count = 0
         messages = []
-        for i, c in enumerate(self.read_buffer):  # should maintain an internal pointer so it doesn't redo the list
+        for i, c in enumerate(
+            self.read_buffer
+        ):  # should maintain an internal pointer so it doesn't redo the list
             count += 1
             # update the "bracket stack"
-            if c == '{':
+            if c == "{":
                 read_bracket_count += 1
-            elif c == '}':
+            elif c == "}":
                 read_bracket_count -= 1
 
             if read_bracket_count == 0:  # a full JSON string is available
                 try:
-
-                    messages.append(json.loads(''.join(self.read_buffer[i - count + 1: i + 1])))
+                    messages.append(
+                        json.loads("".join(self.read_buffer[i - count + 1 : i + 1]))
+                    )
                 except TypeError:
-                    logger.warning('%s | Error parsing message: %s', __class__.__name__, self.read_buffer)
+                    logger.warning(
+                        "%s | Error parsing message: %s",
+                        __class__.__name__,
+                        self.read_buffer,
+                    )
                 count = 0
 
         # strip prior json messages off the buffer
@@ -67,7 +74,7 @@ class MVRConnector:
         try:
             self.connect_to_mvr()
         except Exception as err:
-            logger.error(f'failed to connect to mvr:{err}')
+            logger.error(f"failed to connect to mvr:{err}")
             exit()
 
     def _recv(self):
@@ -78,7 +85,7 @@ class MVRConnector:
         try:
             ret_val = self._mvr_sock.recv(1024)
         except ConnectionResetError as e:
-            logger.warning('%s | Connection reset error', __class__.__name__)
+            logger.warning("%s | Connection reset error", __class__.__name__)
             self._mvr_connected = False
             return []
         except:
@@ -95,7 +102,7 @@ class MVRConnector:
         _send creates json from the dictionary and sends it as a byte object
         """
         msg = json.dumps(msg).encode()
-        logger.debug('%s | Sending: %s', __class__.__name__, msg)
+        logger.debug("%s | Sending: %s", __class__.__name__, msg)
         if not self._mvr_connected:
             self.connect_to_mvr()
         if not self._mvr_connected:
@@ -112,53 +119,73 @@ class MVRConnector:
         self._mvr_sock = socket(AF_INET, SOCK_STREAM)
         self._mvr_sock.settimeout(10.0)
         if self._errors_since_last_success == 0:
-            logger.debug('%s | Connecting on %s:%s', __class__.__name__, self._args["host"], self._args["port"])
+            logger.debug(
+                "%s | Connecting on %s:%s",
+                __class__.__name__,
+                self._args["host"],
+                self._args["port"],
+            )
         try:
-            self._mvr_sock.connect((self._args['host'], self._args['port']))
+            self._mvr_sock.connect((self._args["host"], self._args["port"]))
             self._mvr_connected = True
         except OSError:
             if self._errors_since_last_success == 0:
-                logger.debug('%s | Connection failed, will be re-attempted on the next write.', __class__.__name__)
+                logger.debug(
+                    "%s | Connection failed, will be re-attempted on the next write.",
+                    __class__.__name__,
+                )
             self._errors_since_last_success += 1
         else:
             self._errors_since_last_success = 0
-            logger.debug('%s | Connection success: %s', __class__.__name__, self.read())
+            logger.debug("%s | Connection success: %s", __class__.__name__, self.read())
 
     def get_version(self):
-        msg = {'mvr_request': 'get_version'}
+        msg = {"mvr_request": "get_version"}
         self._send(msg)
         return self.read()
 
     def start_display(self):
-        msg = {'mvr_request': 'start_display'}
+        msg = {"mvr_request": "start_display"}
         self._send(msg)
         return self.read()
 
     def stop_display(self):
-        msg = {'mvr_request': 'stop_display'}
+        msg = {"mvr_request": "stop_display"}
         self._send(msg)
         return self.read()
 
-    def start_record(self, file_name_prefix='', sub_folder='.', record_time=4800):
-        self._send({'mvr_request': 'start_record',
-                    'sub_folder': sub_folder,
-                    'file_name_prefix': file_name_prefix,
-                    'recording_time': record_time,
-                    })
+    def start_record(self, file_name_prefix="", sub_folder=".", record_time=4800):
+        self._send(
+            {
+                "mvr_request": "start_record",
+                "sub_folder": sub_folder,
+                "file_name_prefix": file_name_prefix,
+                "recording_time": record_time,
+            }
+        )
 
-    def start_single_record(self, host, file_name_prefix='', sub_folder='.', record_time=4800):
-        print(f'start single record on {host}')
+    def start_single_record(
+        self, host, file_name_prefix="", sub_folder=".", record_time=4800
+    ):
+        print(f"start single record on {host}")
         if host not in self._host_to_camera_map:
-            comp = self.host_to_comp['host']
-            logger.warning(f'Start Single Record: Can not find host {host} ({comp}) associated with a camera.')
+            comp = self.host_to_comp["host"]
+            logger.warning(
+                f"Start Single Record: Can not find host {host} ({comp}) associated with a camera."
+            )
             return
 
-        self._send({"mvr_request": "start_record",
-                    "camera_indices": [{"camera_index": f"Camera {self._host_to_camera_map[host]}"}],
-                    "sub_folder": sub_folder,
-                    "file_name_prefix": file_name_prefix,
-                    "recording_time": record_time,
-                    })
+        self._send(
+            {
+                "mvr_request": "start_record",
+                "camera_indices": [
+                    {"camera_index": f"Camera {self._host_to_camera_map[host]}"}
+                ],
+                "sub_folder": sub_folder,
+                "file_name_prefix": file_name_prefix,
+                "recording_time": record_time,
+            }
+        )
 
     def set_automated_ui(self, state):
         if state:
@@ -171,21 +198,25 @@ class MVRConnector:
         return self.read()
 
     def stop_record(self):
-        msg = {'mvr_request': 'stop_record'}
+        msg = {"mvr_request": "stop_record"}
         self._send(msg)
         # return self.read()
 
     def stop_single_record(self, host):
         if host not in self._host_to_camera_map:
-            comp = self.host_to_comp['host']
-            logger.warning(f'Stop Single Record: Can not find host {host} ({comp}) associated with a camera.')
+            comp = self.host_to_comp["host"]
+            logger.warning(
+                f"Stop Single Record: Can not find host {host} ({comp}) associated with a camera."
+            )
             return
 
         cam_id = self._host_to_camera_map[host]
-        message = {"mvr_request": "stop_record",
-                   "camera_indices": [f"Camera {cam_id}",
-                                      ]
-                   }
+        message = {
+            "mvr_request": "stop_record",
+            "camera_indices": [
+                f"Camera {cam_id}",
+            ],
+        }
         self._send(message)
 
     def take_snapshot(self):
@@ -202,25 +233,23 @@ class MVRConnector:
     def request_camera_ids(self):
         self._send({"mvr_request": "get_camera_ids"})
         return self.read()
-    
+
     def highlight_camera(self, device_name):
         print(self.device_index_map)
         index = self.device_index_map[device_name]
-        msg = {'mvr_request': 'toggle_highlight_camera',
-               'camera': index
-               }
+        msg = {"mvr_request": "toggle_highlight_camera", "camera": index}
         self._send(msg)
 
     def unhighlight_camera(self, panel):
-        msg = {'mvr_request': 'unhighlight_panel'}
+        msg = {"mvr_request": "unhighlight_panel"}
         self._send(msg)
         return self.read()
 
     def get_state(self):
         if self._recording:
-            return 'BUSY', 'RECORDING'
+            return "BUSY", "RECORDING"
         else:
-            return 'READY', ''
+            return "READY", ""
 
     def shutdown(self):
         self._rep_sock.close()
@@ -230,6 +259,4 @@ class MVRConnector:
 
     @property
     def platform_info(self):
-        return '0.1.0'
-
-
+        return "0.1.0"
