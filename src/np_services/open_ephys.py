@@ -158,9 +158,9 @@ def is_disk_space_ok() -> bool:
                 exc = ValueError(
                     f"{__name} free disk space on {data_root.drive} doesn't meet minimum of {required} GB"
                 )
-        if exc:
-            return False
-        return True
+    if exc:
+        return False
+    return True
 
 
 def test() -> None:
@@ -212,7 +212,7 @@ def finalize() -> None:
 
 
 def set_folder(
-    name: str, prepend_text: Optional[str] = "", append_text: Optional[str] = ""
+    name: str, prepend_text: str = "", append_text: str = ""
 ) -> None:
     """Recording folder string"""
     recording = requests.get(url(Endpoint.recording)).json()
