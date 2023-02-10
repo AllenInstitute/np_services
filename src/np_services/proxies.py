@@ -917,9 +917,7 @@ class VideoMVR(MVR):
     @classmethod
     def start(cls) -> None:
         cls.latest_start = time.time()
-        cls.get_proxy().start_record(
-            record_time=365 * 60,  # sec
-        )
+        cls.get_proxy().start_record(record_time=365 * 60,)  # sec
 
     @classmethod
     def verify(cls) -> None:
@@ -1131,7 +1129,7 @@ class PlatformJson(JsonRecorder, pydantic.BaseModel):
     "Storage directory for the session."
 
     foraging_id_re = (
-        R"([0-9,a-f]{8}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{12})"
+        r"([0-9,a-f]{8}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{12})"
     )
     time_fmt = "%Y%m%d%H%M%S"
     # pydantic.validator('name', allow_reuse=True)(normalize)

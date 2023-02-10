@@ -71,11 +71,7 @@ class DeviceProxy(object):
     _context.setsockopt(zmq.LINGER, 1)
 
     def __init__(
-        self,
-        ip="localhost",
-        port=None,
-        timeout=10.0,
-        serialization="pickle",
+        self, ip="localhost", port=None, timeout=10.0, serialization="pickle",
     ):
         super().__init__()
         self.__dict__["ip"] = ip

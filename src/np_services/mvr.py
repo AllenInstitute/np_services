@@ -213,9 +213,7 @@ class MVRConnector:
         cam_id = self._host_to_camera_map[host]
         message = {
             "mvr_request": "stop_record",
-            "camera_indices": [
-                f"Camera {cam_id}",
-            ],
+            "camera_indices": [f"Camera {cam_id}",],
         }
         self._send(message)
 
