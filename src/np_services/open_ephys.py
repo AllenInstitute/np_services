@@ -26,7 +26,10 @@ exc: Optional[BaseException] = None
 initialized: float = 0
 "`time.time()` when the service was initialized."
 
-host: str = np_config.Rig().Acq
+try:
+    host: str = np_config.Rig().Acq
+except ValueError:
+    logger.warning("Not connected to a rig: `OpenEphys.host` needs to be set manually.")
 port: str | int = 37497  # 1-800-EPHYS
 latest_start: float = 0
 "`time.time()` when the service was last started via `start()`."
