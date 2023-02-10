@@ -15,7 +15,8 @@ import np_config
 import np_logging
 import requests
 
-import np_services
+import np_services.utils as utils
+from np_services.protocols import TestError
 
 # global vars -------------------------------------------------------------------------- #
 logger = logging.getLogger(__name__)  # logs will show full module path
@@ -65,7 +66,7 @@ class Endpoint(enum.Enum):
 
 
 def launch() -> None:
-    np_services.start_rsc_app(host, rsc_app_id)
+    utils.start_rsc_app(host, rsc_app_id)
 
 
 def pretest() -> None:
@@ -104,8 +105,8 @@ def set_state(state: State) -> requests.Response:
 def is_connected() -> bool:
     global exc
 
-    if not np_services.is_online(host):
-        exc = np_services.TestError(
+    if not utils.is_online(host):
+        exc = TestError(
             f"OpenEphys | No response from {host}: may be offline or unreachable"
         )
         return False
@@ -113,13 +114,13 @@ def is_connected() -> bool:
     try:
         state = get_state()
     except requests.RequestException:
-        exc = np_services.TestError(
+        exc = TestError(
             f"OpenEphys | No response from Open Ephys http server: is the software started?"
         )
         return False
     else:
         if not any(_.value == state for _ in State):
-            exc = np_services.TestError(f"OpenEphys | Unexpected state: {state}")
+            exc = TestError(f"OpenEphys | Unexpected state: {state}")
             return False
 
     return True
@@ -146,7 +147,7 @@ def is_disk_space_ok() -> bool:
     required = get_required_disk_gb()
     for data_root in get_data_roots():
         try:
-            free = np_services.free_gb(data_root)
+            free = utils.free_gb(data_root)
         except FileNotFoundError as exc:
             exc = exc
             logger.exception(f"{__name} data path not accessible: {data_root}")
@@ -170,7 +171,7 @@ def test() -> None:
             raise exc
     gb = get_required_disk_gb()
     if not is_disk_space_ok():
-        raise np_services.TestError(
+        raise TestError(
             f"{__name} free disk space on one or more recording drives doesn't meet minimum of {gb} GB"
         ) from exc
 
@@ -240,7 +241,7 @@ def set_folder(
     response = requests.put(url(Endpoint.recording), json.dumps(recording))
     time.sleep(0.1)
     if (actual := response.json().get("base_text")) != name:
-        raise np_services.TestError(
+        raise TestError(
             f"OpenEphys | Set folder to {name}, but software shows: {actual}"
         )
 
@@ -307,14 +308,14 @@ def verify() -> None:
     logger.info("OpenEphys | Verifying")
     for data_dir in get_latest_data_dirs():
         for file in reversed(
-            np_services.get_files_created_between(
+            utils.get_files_created_between(
                 data_dir, "*/*/*/continuous/*/sample_numbers.npy", latest_start
             )
         ):
-            if np_services.is_file_growing(file):
+            if utils.is_file_growing(file):
                 break
         else:
-            raise np_services.TestError(
+            raise TestError(
                 f"OpenEphys | Data file(s) not increasing in size in {data_dir}"
             )
     logger.info(

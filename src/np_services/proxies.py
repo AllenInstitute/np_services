@@ -26,6 +26,7 @@ import yaml
 import np_services.mvr as mvr
 import np_services.utils as utils
 import np_services.zro as zro
+from np_services.protocols import *
 
 logger = np_logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ class Proxy(abc.ABC):
 
     @classmethod
     def launch(cls) -> None:
-        np_services.start_rsc_app(cls.host, cls.rsc_app_id)
+        utils.start_rsc_app(cls.host, cls.rsc_app_id)
 
     @classmethod
     def initialize(cls) -> None:
@@ -179,13 +180,13 @@ class Proxy(abc.ABC):
         if not hasattr(cls, "latest_start"):
             return [
                 max(
-                    np_services.get_files_created_between(
+                    utils.get_files_created_between(
                         cls.data_root / subfolders, glob
                     ),
                     key=lambda x: x.stat().st_mtime,
                 )
             ]
-        return np_services.get_files_created_between(
+        return utils.get_files_created_between(
             cls.data_root / subfolders, glob, cls.latest_start
         )
 
@@ -203,7 +204,7 @@ class Proxy(abc.ABC):
         if required == 0.0:
             return True
         try:
-            free = np_services.free_gb(cls.data_root)
+            free = utils.free_gb(cls.data_root)
         except FileNotFoundError as exc:
             cls.exc = exc
             logger.exception(
@@ -221,7 +222,7 @@ class Proxy(abc.ABC):
 
     @classmethod
     def is_connected(cls) -> bool:
-        if not np_services.is_online(cls.host):
+        if not utils.is_online(cls.host):
             cls.exc = ConnectionError(
                 f"No response from {cls.host}: may be offline or unreachable"
             )
@@ -285,11 +286,11 @@ class CamstimSyncShared(Proxy):
     @classmethod
     def pretest(cls) -> None:
         "Test all critical functions"
-        with np_services.debug_logging():
+        with utils.debug_logging():
             logger.debug("Starting %s pretest", cls.__name__)
             cls.initialize()  # calls test()
 
-            with np_services.stop_on_error(cls):
+            with utils.stop_on_error(cls):
                 cls.start()
                 time.sleep(1)
                 cls.verify()
@@ -435,7 +436,7 @@ class Sync(CamstimSyncShared):
     def verify(cls) -> None:
         "Assert latest data file is currently increasing in size, or raise AssertionError."
         super().verify()
-        if cls.data_root and not np_services.is_file_growing(cls.get_latest_data()[-1]):
+        if cls.data_root and not utils.is_file_growing(cls.get_latest_data()[-1]):
             raise AssertionError(
                 f"{cls.__name__} latest data file is not increasing in size: {cls.get_latest_data()[-1]}"
             )
@@ -627,7 +628,7 @@ class NoCamstim(Camstim):
     def initialize(cls) -> None:
         if not hasattr(cls, "password"):
             cls.password = input(f"{cls.__name__} | Enter password for {cls.host}: ")
-        cls.remote_file = np_services.unc_to_local(pathlib.Path(cls.remote_file))
+        cls.remote_file = utils.unc_to_local(pathlib.Path(cls.remote_file))
         cls.ssh = fabric.Connection(
             cls.host, cls.user, connect_kwargs=dict(password=cls.password)
         )
@@ -710,7 +711,7 @@ class MVR(CamstimSyncShared):
 
     @classmethod
     def is_connected(cls) -> bool:
-        if not np_services.is_online(cls.host):
+        if not utils.is_online(cls.host):
             cls.exc = ConnectionError(
                 f"No response from {cls.host}: may be offline or unreachable"
             )
@@ -1097,7 +1098,7 @@ class YamlRecorder(JsonRecorder):
     def finalize(cls) -> None:
         logger.debug("Finalizing %s", __class__.__name__)
         log = json.load(cls.get_current_log().read_bytes())
-        with np_services.suppress(
+        with utils.suppress(
             AttributeError, OSError
         ):  # if this fails we still have the json file
             yaml.dump(log, cls.get_current_log().with_suffix(".yaml").read_bytes())

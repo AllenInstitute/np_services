@@ -15,8 +15,8 @@ from typing import Any, Generator, Literal, Mapping, Optional, Sequence, Type
 import np_config
 import np_logging
 
+import np_services.protocols as protocols
 import np_services.zro as zro
-from np_services.protocols import Stoppable
 
 logger = np_logging.getLogger(__name__)
 
@@ -74,8 +74,8 @@ def debug_logging() -> Generator[None, None, None]:
 
 
 @contextlib.contextmanager
-def stop_on_error(obj: Stoppable, reraise=True):
-    if not isinstance(obj, Stoppable):
+def stop_on_error(obj: protocols.Stoppable, reraise=True):
+    if not isinstance(obj, protocols.Stoppable):
         raise TypeError(f"{obj} does not support stop()")
     try:
         yield
