@@ -64,7 +64,7 @@ def start_rsc_apps() -> None:
 
 @contextlib.contextmanager
 def debug_logging() -> Generator[None, None, None]:
-    root_logger = logging.getLogger()
+    root_logger = logging.getLogger("root")
     level_0 = root_logger.level
     root_logger.setLevel(logging.DEBUG)
     try:

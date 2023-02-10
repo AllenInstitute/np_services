@@ -9,7 +9,7 @@ import np_logging
 
 from np_services import *
 
-np_logging.getLogger(__name__)
+logger = np_logging.getLogger()
 
 with debug_logging():
     if True:

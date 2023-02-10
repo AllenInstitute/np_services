@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import enum
 import json
-import logging
 import os
 import pathlib
 import shutil
@@ -19,7 +18,7 @@ import np_services.utils as utils
 from np_services.protocols import TestError
 
 # global vars -------------------------------------------------------------------------- #
-logger = logging.getLogger(__name__)  # logs will show full module path
+logger = np_logging.getLogger(__name__)  # logs will show full module path
 
 __name = "OpenEphys"  # Service protocol operations will see just the 'class' name
 
