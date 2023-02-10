@@ -9,13 +9,10 @@ packages = [{include = "np_services", from = "src"}]
 [tool.poetry.dependencies]
 python = "^3.9"
 requests = "*"
-np_config = "*"
 np_session = "*"
-np_logging = "*"
 backoff = "*"
 pyzmq = "*"
 fabric = "^2.7"
-pandas = "^1.5"
 pydantic = "^1.10"
 pip-tools = {version = "*", optional = true}
 isort = {version = "*", optional = true}
