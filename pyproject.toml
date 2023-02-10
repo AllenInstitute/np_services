@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "np-services"
-version = "0.1.0"
+version = "0.1.2"
 description = "Tools for interfacing with devices and services used in Mindscope Neuropixels experiments at the Allen Institute."
 authors = ["bjhardcastle <ben.hardcastle@alleninstitute.org>"]
 readme = "README.md"
