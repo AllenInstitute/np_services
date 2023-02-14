@@ -107,7 +107,7 @@ class Proxy(abc.ABC):
                     ) from exc
                 else:
                     cls.data_root = root
-        if hasattr(cls, "data_root"):
+        if hasattr(cls, "data_root") and cls.data_root:
             cls.data_root.mkdir(parents=True, exist_ok=True)
 
     @classmethod
