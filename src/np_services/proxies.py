@@ -1268,8 +1268,8 @@ class PlatformJsonWriter(pydantic.BaseModel):
         self.path.touch()
         if update_existing:
             self.load_from_existing()
-        self.path.write_text(self.json())
-        logger.debug("%s wrote to %s", self.__class__.__name__, self.path)
+        self.path.write_text(self.json(indent=4))
+        logger.debug("%s wrote to %s", self.__class__.__name__, self.path.as_posix())
     
     @pydantic.validator("path", pre=True)
     def normalize_path(cls, v: str | pathlib.Path) -> pathlib.Path:
@@ -1287,20 +1287,38 @@ class PlatformJsonWriter(pydantic.BaseModel):
         v.replace(".json.json", ".json")
         return v
 
-    foraging_id_re: ClassVar[str] = (
+    _normalize_time = pydantic.validator(
+        *(
+            'workflow_start_time',
+            'HeadFrameEntryTime',
+            'CartridgeLowerTime',
+            'ProbeInsertionStartTime',
+            'ProbeInsertionCompleteTime',
+            'ExperimentStartTime',
+            'ExperimentCompleteTime',
+            'HeadFrameExitTime',
+            'manifest_creation_time',
+            'workflow_complete_time',
+            'platform_json_save_time',
+        ),
+        allow_reuse=True, pre=True)(utils.normalize_time)
+    
+    _foraging_id_re: ClassVar[str] = (
         r"([0-9,a-f]{8}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{12})"
     )
-
+    
     # auto-generated / ignored ------------------------------------------------------------- #
     rig_id: str = np_config.Rig().id
-    workflow_start_time: str = pydantic.Field(
-        default_factory=lambda: datetime.datetime.now().strftime(PLATFORM_JSON_TIME_FMT)
-    )
     wfl_version: float = 1.0
 
     # pre-experiment ---------------------------------------------------------------------- #
-    operatorID: str = ""
-    DiINotes: dict[str, str] = dict(
+    workflow_start_time: str = pydantic.Field(
+        default_factory=lambda: utils.normalize_time(time.time())
+    )
+    operatorID: Optional[str] = ""
+    sessionID: Optional[str | int] = ""
+    mouseID: Optional[str | int] = ""
+    DiINotes: dict[str, int | str] = dict(
         EndTime="", StartTime="", dii_description="", times_dipped=""
     )
     probe_A_DiI_depth: str = ""
@@ -1328,9 +1346,9 @@ class PlatformJsonWriter(pydantic.BaseModel):
     ExperimentNotes: dict[str, dict[str, Any]] = dict(
         BleedingOnInsertion={}, BleedingOnRemoval={}
     )
-    foraging_id: str = pydantic.Field(default="", regex=foraging_id_re)
+    foraging_id: str = pydantic.Field(default="", regex=_foraging_id_re)
     foraging_id_list: list[str] = pydantic.Field(
-        default_factory=lambda: [""], regex=foraging_id_re
+        default_factory=lambda: [""], regex=_foraging_id_re
     )
     HeadFrameExitTime: str = ""
     mouse_weight_post: str = ""
