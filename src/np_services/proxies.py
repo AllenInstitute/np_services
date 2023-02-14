@@ -3,12 +3,11 @@ Proxy classes for interacting with devices via zro/zmq.
 
 Proxy class names must match the name of the proxy key in the config dict.
 """
-from __future__ import annotations
-
 import abc
 import contextlib
 import csv
 import datetime
+import functools
 import json  # loading config from Sync proxy will instantiate datetime objects
 import logging
 import pathlib
@@ -57,7 +56,7 @@ class Proxy(abc.ABC):
     # info
     exc: ClassVar[Optional[Exception]] = None
 
-    latest_start: ClassVar[int] = 0
+    latest_start: ClassVar[float | int]
     "`time.time()` when the service was last started via `start()`."
 
     @classmethod
@@ -1236,7 +1235,6 @@ class YamlRecorder(JsonRecorder):
         ):  # if this fails we still have the json file
             yaml.dump(log, cls.get_current_log().with_suffix(".yaml").read_bytes())
 
-PLATFORM_JSON_TIME_FMT = "%Y%m%d%H%M%S"
 
 class PlatformJsonWriter(pydantic.BaseModel):
     """Writes D1 platform json for lims upload. Just requires a path (dir or dir+filename)."""

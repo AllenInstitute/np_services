@@ -7,7 +7,7 @@ readme = "README.md"
 packages = [{include = "np_services", from = "src"}]
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 requests = "*"
 np_session = "*"
 backoff = "*"
