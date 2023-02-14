@@ -686,12 +686,54 @@ class NoCamstim(Camstim):
         logger.warning(f"{cls.__name__} | No verification implemented")
 
 
-class MouseDirector(CamstimSyncShared):
+class MouseDirector(Proxy):
+    """Communicate with the ZMQ remote object specified here:
+    http://aibspi.corp.alleninstitute.org/braintv/visual_behavior/mouse_director/-/blob/master/src/mousedirector.py
+
+    ::
+        MouseDirector.get_proxy().set_mouse_id(str(366122))
+        MouseDirector.get_proxy().set_user_id("ben.hardcastle")
+    """
+    
+    user: ClassVar[str | np_session.User]
+    mouse: ClassVar[str | int | np_session.Mouse]
+    
+    rsc_app_id = CONFIG['MouseDirector']['rsc_app_id']
     host = np_config.Rig().Mon
     gb_per_hr = 0
     serialization = "json"
-
-
+    started_state: ClassVar[ProxyState] = ("READY", "")
+    not_connected_state: ClassVar[ProxyState] = ("", "NOT_CONNECTED")
+    
+    @classmethod
+    def pretest(cls):
+        logger.debug(f"{cls.__name__} | Pretest")
+        cls.initialize()
+        cls.test()
+        cls.get_proxy().retract_lick_spout()
+        time.sleep(3)
+        cls.get_proxy().extend_lick_spout()
+        time.sleep(3)
+        cls.get_proxy().retract_lick_spout()
+        time.sleep(3)
+        logger.info(f"{cls.__name__} | Pretest passed")
+        
+    @classmethod
+    def initialize(cls):
+        logger.debug(f"{cls.__name__} | Initializing")
+        super().initialize()
+        cls.get_proxy().set_mouse_id(str(cls.mouse))
+        time.sleep(1)
+        cls.get_proxy().set_user_id(str(cls.user))
+        time.sleep(1)
+        
+    @classmethod
+    def get_state(cls) -> ProxyState:
+        result: str = cls.get_proxy().rig_dict
+        if str(np_config.Rig()) in result:
+            return cls.started_state
+        return cls.not_connected_state
+    
 class Cam3d(CamstimSyncShared):
     
     label: str
