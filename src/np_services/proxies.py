@@ -164,7 +164,9 @@ class Proxy(abc.ABC):
     @classmethod
     def get_state(cls) -> ProxyState | dict:
         "Dict may be deprecated: is no longer returned by Sync or Camstim proxies."
-        return cls.get_proxy().get_state()
+        state = cls.get_proxy().get_state()
+        logger.debug("%s state: %s", cls.__name__, state)
+        return state
 
     @classmethod
     def get_latest_data(
