@@ -1234,42 +1234,65 @@ class YamlRecorder(JsonRecorder):
         ):  # if this fails we still have the json file
             yaml.dump(log, cls.get_current_log().with_suffix(".yaml").read_bytes())
 
+PLATFORM_JSON_TIME_FMT = "%Y%m%d%H%M%S"
 
-class PlatformJson(JsonRecorder, pydantic.BaseModel):
-    """D1 platform json for lims upload."""
+class PlatformJsonWriter(pydantic.BaseModel):
+    """Writes D1 platform json for lims upload. Just requires a path (dir or dir+filename)."""
 
+    # ------------------------------------------------------------------------------------- #
+    # required kwargs on init: 
+    
+    path: pathlib.Path
+    "Typically the storage directory for the session. Will be modified on assignment."
+    
+    # ------------------------------------------------------------------------------------- #
+    
     class Config:
-        validate_assignment = True
-
-    def __init__(self, name, path):
-        self.__class__.log_name = self.name
-        self.__class__.log_root = self.path
-        self.__class__.__dict__ = self.dict()
-        super().initialize()
-
+        validate_assignment = True # coerce types on assignment
+        extra = 'forbid' # properties must be defined in the model
+        fields = {'path': {'exclude': True}}
+        
     suffix: ClassVar[str] = "_platformD1.json"
-    name: str
-    "Typically the session folder string: will be formatted with `cls.suffix` if not already present."
-
-    @pydantic.validator("name")
-    def log_name_suffix(cls, v):
+    
+    def load_from_existing(self) -> None:
+        "Reads existing file and loads all non-empty fields to self."
+        if existing := json.loads(self.path.read_text() or "{}"):
+            for k, v in existing.items():
+                if v and v != getattr(self, k):
+                    setattr(self, k, v)
+        
+    def write(self, update_existing=True): 
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.touch()
+        if update_existing:
+            self.load_from_existing()
+        self.path.write_text(self.json())
+        logger.debug("%s wrote to %s", self.__class__.__name__, self.path)
+    
+    @pydantic.validator("path", pre=True)
+    def normalize_path(cls, v: str | pathlib.Path) -> pathlib.Path:
+        return np_config.normalize_path(v)
+    
+    @pydantic.validator("path")
+    def add_filename_to_path(cls, v: pathlib.Path) -> pathlib.Path:
+        name = cls.append_suffix_to_filename(v.name)
+        return v / name if v.is_dir() else v.with_name(name)
+    
+    @classmethod
+    def append_suffix_to_filename(cls, v: str) -> str:
         if not v.endswith(cls.suffix):
             v += cls.suffix
         v.replace(".json.json", ".json")
         return v
 
-    path: pathlib.Path
-    "Storage directory for the session."
-
-    foraging_id_re = (
+    foraging_id_re: ClassVar[str] = (
         r"([0-9,a-f]{8}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{12})"
     )
-    time_fmt = "%Y%m%d%H%M%S"
-    # pydantic.validator('name', allow_reuse=True)(normalize)
+
     # auto-generated / ignored ------------------------------------------------------------- #
-    rig_id: str = np_config.RIG_ID or ""
+    rig_id: str = np_config.Rig().id
     workflow_start_time: str = pydantic.Field(
-        default_factory=lambda: datetime.datetime.now().strftime(time_fmt)
+        default_factory=lambda: datetime.datetime.now().strftime(PLATFORM_JSON_TIME_FMT)
     )
     wfl_version: float = 1.0
 
