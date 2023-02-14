@@ -693,15 +693,106 @@ class MouseDirector(CamstimSyncShared):
 
 
 class Cam3d(CamstimSyncShared):
+    
+    label: str
+    
     host = np_config.Rig().Mon
     serialization = "json"
-    started_state = ("READY", "CAMERAS_OPEN,CAMERAS_ACQUIRING")
-
+    started_state = ["READY", "CAMERAS_OPEN,CAMERAS_ACQUIRING"]
+    rsc_app_id = CONFIG['Cam3d']['rsc_app_id']
+    data_files: ClassVar[list[pathlib.Path]]
+    
+    @classmethod
+    def is_started(cls) -> bool:
+        return cls.get_state() == cls.started_state
+    
+    @classmethod
+    def is_ready_to_start(cls) -> bool:
+       if cls.is_started():
+           return False
+       time.sleep(1)
+       if 'CAMERAS_CLOSED' in cls.get_state():
+           return False
+       return True
+    
     @classmethod
     def initialize(cls) -> None:
+        logger.debug(f"{cls.__name__} | Initializing")
+        super().initialize()
+        if not cls.is_ready_to_start():
+            cls.reenable_cameras()
+            
+        time.sleep(1)
+    @classmethod
+    def reenable_cameras(cls) -> None:
+        cls.get_proxy().release_cameras()
+        time.sleep(1)
         cls.get_proxy().enable_cameras()
+        time.sleep(1)
+        cls.get_proxy().stop_capture()
+        time.sleep(1)
+        cls.get_proxy().start_capture()
+        time.sleep(1)
+        
+    @classmethod
+    def generate_image_paths(cls) -> tuple[pathlib.Path, pathlib.Path]:
+        if not hasattr(cls, 'label') or not cls.label:
+            logger.warning(f"{cls.__name__} | `cls.label` not specified")
+        def path(side: str) -> pathlib.Path:
+            return cls.data_root / f"{datetime.datetime.now():%Y%m%d_%H%M%S}_{getattr(cls, 'label', 'image')}_{side}.png"
+        return path('left'), path('right')
+    
+    @classmethod
+    def start(cls) -> None:
+        logger.debug(f"{cls.__name__} | Starting")
+        cls.latest_start = time.time()
+        left, right = cls.generate_image_paths()
+        cls.reenable_cameras()
+        time.sleep(1)
+        # _ = cls.get_proxy().get_left_image()
+        cls.get_proxy().save_left_image(str(left))
+        time.sleep(1)
+        # logger.info(_)
+        cls.reenable_cameras()
+        time.sleep(1)
+        # _ = cls.get_proxy().get_right_image()
+        # logger.info(_)
+        cls.get_proxy().save_right_image(str(right))
+        time.sleep(1)
+        for path, side in zip((left, right), ('Left', 'Right')):
+            if path.exists():
+                logger.debug(f"{cls.__name__} | {side} image saved to {path}")
+            else:
+                logger.debug(f"{cls.__name__} | {side} image capture request sent, but image not saved")
+    
+    @classmethod
+    def finalize(cls) -> None:
+        logger.debug(f"{cls.__name__} | Finalizing")
+        while (
+            cls.is_started()
+            or not (latest := cls.get_latest_data('*'))
+        ):
+            time.sleep(1)
+            cls.reenable_cameras()
+        cls.data_files.extend(latest)
+        logger.debug(f"{cls.__name__} | Images captured: {latest}")
+        
+    @classmethod
+    def validate(cls):
+        if not (latest := cls.get_latest_data('*')) or len(latest) != 2:
+            raise AssertionError(f"{cls.__name__} | Expected 2 images, got {len(latest)}: {latest}")
 
-
+    @classmethod
+    def pretest(cls):
+        logger.debug(f"{cls.__name__} | Pretest")
+        cls.label = 'pretest'
+        cls.initialize()
+        cls.test()
+        cls.start()
+        cls.finalize()
+        cls.validate()
+        logger.info(f"{cls.__name__} | Pretest passed")
+        
 class MVR(CamstimSyncShared):
     # req proxy config - hardcode or overload ensure_config()
     host: ClassVar[str] = np_config.Rig().Mon
