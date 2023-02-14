@@ -41,9 +41,9 @@ def start_rsc_app(host, app_id) -> None:
     if rsc_node.p_status().get(app_id) == 0:
         logger.info("Launching %s on %s via RSC", app_id, host)
         rsc_node.p_start(app_id)
-        time.sleep(0.1)
+        time.sleep(0.5)
         if rsc_node.p_status().get(app_id) != 0:
-            logger.warning("Failed to start %s", app_id)
+            logger.warning("%s not confirmed as launched - may be slow to start", app_id)
             return
     logger.info("%s is running on %s", app_id, host)
 
