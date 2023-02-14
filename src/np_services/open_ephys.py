@@ -300,9 +300,7 @@ def get_latest_data_dirs() -> list[pathlib.Path]:
             dirs.append(subfolders[-1])
     return dirs
 
-
-def verify() -> None:
-    logger.info("OpenEphys | Verifying")
+def check_files_increasing_in_size() -> None:
     for data_dir in get_latest_data_dirs():
         for file in reversed(
             utils.get_files_created_between(
@@ -315,6 +313,10 @@ def verify() -> None:
             raise TestError(
                 f"OpenEphys | Data file(s) not increasing in size in {data_dir}"
             )
+
+def verify() -> None:
+    logger.info("OpenEphys | Verifying")
+    check_files_increasing_in_size()    
     logger.info(
         "OpenEphys | Verified files are increasing in size for all Record Nodes"
     )
