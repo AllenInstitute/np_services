@@ -165,7 +165,7 @@ def is_file_growing(path: str | bytes | os.PathLike) -> bool:
 PLATFORM_JSON_TIME_FMT = "%Y%m%d%H%M%S"
 
 @functools.singledispatch
-def normalize_time(time: datetime.datetime | float | int | str) -> str: 
+def normalize_time(t) -> str: 
     """
     >>> normalize_time(datetime.datetime(2023, 2, 14, 13, 30, 00))
     '20230214133000'
@@ -180,20 +180,22 @@ def normalize_time(time: datetime.datetime | float | int | str) -> str:
     >>> normalize_time('2023-02-14T13:30:00')
     '20230214133000'
     """
-    ...
+    return t
     
 @normalize_time.register
-def _(time: datetime.datetime) -> str:
-    return time.strftime(PLATFORM_JSON_TIME_FMT)
+def _(t: datetime.datetime) -> str:
+    return t.strftime(PLATFORM_JSON_TIME_FMT)
 
 @normalize_time.register
-def _(time: float | int) -> str:
-    return datetime.datetime.fromtimestamp(time).strftime(PLATFORM_JSON_TIME_FMT)
+def _(t: float | int) -> str:
+    return datetime.datetime.fromtimestamp(t).strftime(PLATFORM_JSON_TIME_FMT)
 
 @normalize_time.register
-def _(time: str) -> str:
+def _(t: str) -> str:
+    if len(t) == 14: # already in correct format
+        return datetime.datetime(int(t[:4]), *(int(t[a:a+2]) for a in range(4,14,2))).strftime(PLATFORM_JSON_TIME_FMT)
     with contextlib.suppress(ValueError):
-        return datetime.datetime.fromtimestamp(float(time)).strftime(PLATFORM_JSON_TIME_FMT)
+        return datetime.datetime.fromtimestamp(float(t)).strftime(PLATFORM_JSON_TIME_FMT)
     with contextlib.suppress(ValueError):
-        return datetime.datetime.fromisoformat(time).strftime(PLATFORM_JSON_TIME_FMT) 
-    raise ValueError(f"Unable to parse time: {time}")
+        return datetime.datetime.fromisoformat(t).strftime(PLATFORM_JSON_TIME_FMT) 
+    raise ValueError(f"Unable to parse time: {t}")
