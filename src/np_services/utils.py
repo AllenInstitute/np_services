@@ -41,11 +41,21 @@ def start_rsc_app(host, app_id) -> None:
     if rsc_node.p_status().get(app_id) == 0:
         logger.info("Launching %s on %s via RSC", app_id, host)
         rsc_node.p_start(app_id)
-        time.sleep(0.5)
-        if rsc_node.p_status().get(app_id) != 0:
+        time.sleep(1)
+        if rsc_node.p_status().get(app_id) == 0:
             logger.warning("%s not confirmed as launched - may be slow to start", app_id)
             return
     logger.info("%s is running on %s", app_id, host)
+    
+def kill_rsc_app(host, app_id) -> None:
+    "Does the same as the `kill` action in the RSC gui"
+    rsc_node = zro.Proxy(host, 6000)
+    rsc_node.p_stop(app_id)
+    time.sleep(1)
+    if rsc_node.p_status().get(app_id) != 0:
+        logger.warning("%s not confirmed as killed - may be slow to shutdown", app_id)
+        return
+    logger.info("%s killed on %s", app_id, host)
 
 
 def start_rsc_apps() -> None:
