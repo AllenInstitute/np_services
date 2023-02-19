@@ -112,6 +112,10 @@ class Proxy(abc.ABC):
     @classmethod
     def launch(cls) -> None:
         utils.start_rsc_app(cls.host, cls.rsc_app_id)
+    
+    @classmethod
+    def kill(cls) -> None:
+        utils.kill_rsc_app(cls.host, cls.rsc_app_id)
 
     @classmethod
     def initialize(cls) -> None:
