@@ -713,15 +713,18 @@ class MouseDirector(Proxy):
     
     @classmethod
     def pretest(cls):
-        logger.debug(f"{cls.__name__} | Pretest")
-        cls.initialize()
-        cls.test()
-        cls.get_proxy().retract_lick_spout()
-        time.sleep(3)
-        cls.get_proxy().extend_lick_spout()
-        time.sleep(3)
-        cls.get_proxy().retract_lick_spout()
-        time.sleep(3)
+        with utils.debug_logging():
+            logger.debug(f"{cls.__name__} | Pretest")
+            cls.user = "ben.hardcastle"
+            cls.mouse = 366122
+            cls.initialize()
+            cls.test()
+            cls.get_proxy().retract_lick_spout()
+            time.sleep(3)
+            cls.get_proxy().extend_lick_spout()
+            time.sleep(3)
+            cls.get_proxy().retract_lick_spout()
+            time.sleep(3)
         logger.info(f"{cls.__name__} | Pretest passed")
         
     @classmethod
@@ -732,6 +735,7 @@ class MouseDirector(Proxy):
         time.sleep(1)
         cls.get_proxy().set_user_id(str(cls.user))
         time.sleep(1)
+        logger.debug(f"{cls.__name__} | Initialized with mouse {cls.mouse}, user {cls.user}")
         
     @classmethod
     def get_state(cls) -> ProxyState:
