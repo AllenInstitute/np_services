@@ -1130,9 +1130,10 @@ class JsonRecorder:
 
     @classmethod
     def pretest(cls) -> None:
-        cls.initialize()
-        cls.start()
-        cls.validate()
+        with utils.debug_logging():
+            cls.initialize()
+            cls.start()
+            cls.validate()
 
     @classmethod
     def ensure_config(cls) -> None:
