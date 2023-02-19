@@ -754,8 +754,11 @@ class Cam3d(CamstimSyncShared):
        if cls.is_started():
            return False
        time.sleep(1)
-       if 'CAMERAS_CLOSED' in cls.get_state():
-           return False
+       if (
+           cls.get_state() == cls.started_state
+           or 'READY' not in cls.get_state()
+        ):
+            return False
        return True
     
     @classmethod
@@ -766,16 +769,17 @@ class Cam3d(CamstimSyncShared):
             cls.reenable_cameras()
             
         time.sleep(1)
+        
     @classmethod
     def reenable_cameras(cls) -> None:
         cls.get_proxy().release_cameras()
-        time.sleep(1)
+        time.sleep(.2)
         cls.get_proxy().enable_cameras()
-        time.sleep(1)
+        time.sleep(.2)
         cls.get_proxy().stop_capture()
-        time.sleep(1)
+        time.sleep(.2)
         cls.get_proxy().start_capture()
-        time.sleep(1)
+        time.sleep(.2)
         
     @classmethod
     def generate_image_paths(cls) -> tuple[pathlib.Path, pathlib.Path]:
@@ -790,18 +794,9 @@ class Cam3d(CamstimSyncShared):
         logger.debug(f"{cls.__name__} | Starting")
         cls.latest_start = time.time()
         left, right = cls.generate_image_paths()
-        cls.reenable_cameras()
-        time.sleep(1)
-        # _ = cls.get_proxy().get_left_image()
         cls.get_proxy().save_left_image(str(left))
-        time.sleep(1)
-        # logger.info(_)
-        cls.reenable_cameras()
-        time.sleep(1)
-        # _ = cls.get_proxy().get_right_image()
-        # logger.info(_)
         cls.get_proxy().save_right_image(str(right))
-        time.sleep(1)
+        time.sleep(.5)
         for path, side in zip((left, right), ('Left', 'Right')):
             if path.exists():
                 logger.debug(f"{cls.__name__} | {side} image saved to {path}")
@@ -811,12 +806,16 @@ class Cam3d(CamstimSyncShared):
     @classmethod
     def finalize(cls) -> None:
         logger.debug(f"{cls.__name__} | Finalizing")
+        counter = 0
         while (
             cls.is_started()
             or not (latest := cls.get_latest_data('*'))
+            or counter < 12
         ):
             time.sleep(1)
-            cls.reenable_cameras()
+            counter += 1
+            if counter == 10:
+                cls.reenable_cameras()
         cls.data_files.extend(latest)
         logger.debug(f"{cls.__name__} | Images captured: {latest}")
         
@@ -827,15 +826,16 @@ class Cam3d(CamstimSyncShared):
 
     @classmethod
     def pretest(cls):
-        logger.debug(f"{cls.__name__} | Pretest")
-        cls.label = 'pretest'
-        cls.initialize()
-        cls.test()
-        cls.start()
-        cls.finalize()
-        cls.validate()
-        logger.info(f"{cls.__name__} | Pretest passed")
-        
+        with utils.debug_logging():
+            logger.debug(f"{cls.__name__} | Pretest")
+            cls.label = 'pretest'
+            cls.initialize()
+            cls.test()
+            cls.start()
+            cls.finalize()
+            cls.validate()
+            logger.info(f"{cls.__name__} | Pretest passed")
+            
 class MVR(CamstimSyncShared):
     # req proxy config - hardcode or overload ensure_config()
     host: ClassVar[str] = np_config.Rig().Mon
