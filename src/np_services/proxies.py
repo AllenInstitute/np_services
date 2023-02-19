@@ -21,6 +21,7 @@ import np_logging
 import np_session
 import pydantic
 import yaml
+import pandas as pd
 
 import np_services.mvr as mvr
 import np_services.utils as utils
@@ -1396,7 +1397,8 @@ class NewScaleCoordinateRecorder(JsonRecorder):
         return cls.data_root / cls.data_name
 
     @classmethod
-    def get_coordinates(cls) -> dict[str, float]:
+    def last_logged_coords_csv(cls) -> dict[str, float]:
+        "Get the most recent coordinates from the log file using the csv parser in the stdlib."
         with cls.get_current_data().open("r") as _:
             reader = csv.DictReader(_, fieldnames=cls.data_fieldnames)
             rows = list(reader)
@@ -1413,6 +1415,30 @@ class NewScaleCoordinateRecorder(JsonRecorder):
                     with contextlib.suppress(ValueError):
                         v = float(v)
                     coords[m].update({k: v})
+        return coords
+
+    @classmethod
+    def last_logged_coords_pd(cls) -> dict[str, float]:
+        "Get the most recent coordinates from the log file using pandas."
+        df = pd.read_csv(cls.get_current_data(), names=cls.data_fieldnames)
+        coords = {}
+        manipulator_label = cls.data_fieldnames[1]
+        last_moved_label = cls.data_fieldnames[0]
+        for manipulator_serial_num, rows in df.groupby(manipulator_label): 
+            rows.sort_values(by=last_moved_label, ascending=False, inplace=True) 
+            new = {key: dict(rows.iloc[0])[key] for key in cls.data_fieldnames if (key != manipulator_label and 'virtual' not in key)}
+            coords[str(manipulator_serial_num).strip()] = new
+        return coords
+
+    @classmethod
+    def get_coordinates(cls) -> dict[str, float]:
+        try:
+            import pandas as pd
+        except ImportError:
+            coords = cls.last_logged_coords_csv()
+        else:
+            coords = cls.last_logged_coords_pd()
+            
         coords["label"] = cls.label
         logger.debug("%s retrieved coordinates: %s", cls.__name__, coords)
         return coords
