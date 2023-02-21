@@ -1393,7 +1393,7 @@ class NewScaleCoordinateRecorder(JsonRecorder):
         "y_virtual",
         "z_virtual",
     )
-
+    max_z_travel: ClassVar[int] = 6000 # seems to be the config for NP0, despite short-travel manipulators
     num_probes: ClassVar[int] = 6
     max_travel: ClassVar[float]
     log_name: ClassVar[str] = "newscale_coords_{}.json"
@@ -1451,6 +1451,12 @@ class NewScaleCoordinateRecorder(JsonRecorder):
         else:
             coords = cls.last_logged_coords_pd()
             
+        def adjust_z_travel(coords):
+            for v in coords.values():
+                if 'z' in v:
+                    v['z'] = cls.max_z_travel - v['z']
+        adjust_z_travel(coords)
+        
         coords["label"] = cls.label
         logger.debug("%s retrieved coordinates: %s", cls.__name__, coords)
         return coords
