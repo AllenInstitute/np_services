@@ -96,9 +96,7 @@ def debug_logging() -> Generator[None, None, None]:
 
 
 @contextlib.contextmanager
-def stop_on_error(objs: protocols.Stoppable | Sequence[protocols.Stoppable], reraise=True):
-    if not isinstance(objs, Sequence):
-        objs = (objs,)
+def stop_on_error(*objs: protocols.Stoppable, reraise=True):
     for obj in objs:
         if not isinstance(obj, protocols.Stoppable):
             raise TypeError(f"{obj} does not support stop()")
