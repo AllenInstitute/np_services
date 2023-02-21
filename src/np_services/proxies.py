@@ -1134,6 +1134,10 @@ class JsonRecorder:
     log_name: ClassVar[str]
     log_root: ClassVar[pathlib.Path]
 
+    @abc.abstractclassmethod
+    def start() -> None:
+        pass
+    
     @classmethod
     def pretest(cls) -> None:
         with utils.debug_logging():
