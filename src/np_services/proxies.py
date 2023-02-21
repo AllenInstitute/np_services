@@ -1377,6 +1377,15 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     data_fieldnames: ClassVar[Sequence[str]] = (
         "last_moved",
         "manipulator",
+        "x_virtual",
+        "y_virtual",
+        "z_virtual",
+        "x",
+        "y",
+        "z",
+    ) if np_config.Rig().idx == 0 else (
+        "last_moved",
+        "manipulator",
         "x",
         "y",
         "z",
