@@ -1252,127 +1252,6 @@ class YamlRecorder(JsonRecorder):
             yaml.dump(log, cls.get_current_log().with_suffix(".yaml").read_bytes())
 
 
-class PlatformJsonWriter(pydantic.BaseModel):
-    """Writes D1 platform json for lims upload. Just requires a path (dir or dir+filename)."""
-
-    # ------------------------------------------------------------------------------------- #
-    # required kwargs on init: 
-    
-    path: pathlib.Path
-    "Typically the storage directory for the session. Will be modified on assignment."
-    
-    # ------------------------------------------------------------------------------------- #
-    
-    class Config:
-        validate_assignment = True # coerce types on assignment
-        extra = 'forbid' # properties must be defined in the model
-        fields = {'path': {'exclude': True}}
-        
-    suffix: ClassVar[str] = "_platformD1.json"
-    
-    def load_from_existing(self) -> None:
-        "Reads existing file and loads all non-empty fields to self."
-        if existing := json.loads(self.path.read_text() or "{}"):
-            for k, v in existing.items():
-                if v and v != getattr(self, k):
-                    setattr(self, k, v)
-        
-    def write(self, update_existing=True): 
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.path.touch()
-        if update_existing:
-            self.load_from_existing()
-        self.path.write_text(self.json(indent=4))
-        logger.debug("%s wrote to %s", self.__class__.__name__, self.path.as_posix())
-    
-    @pydantic.validator("path", pre=True)
-    def normalize_path(cls, v: str | pathlib.Path) -> pathlib.Path:
-        return np_config.normalize_path(v)
-    
-    @pydantic.validator("path")
-    def add_filename_to_path(cls, v: pathlib.Path) -> pathlib.Path:
-        name = cls.append_suffix_to_filename(v.name)
-        return v / name if v.is_dir() else v.with_name(name)
-    
-    @classmethod
-    def append_suffix_to_filename(cls, v: str) -> str:
-        if not v.endswith(cls.suffix):
-            v += cls.suffix
-        v.replace(".json.json", ".json")
-        return v
-
-    _normalize_time = pydantic.validator(
-        *(
-            'workflow_start_time',
-            'HeadFrameEntryTime',
-            'CartridgeLowerTime',
-            'ProbeInsertionStartTime',
-            'ProbeInsertionCompleteTime',
-            'ExperimentStartTime',
-            'ExperimentCompleteTime',
-            'HeadFrameExitTime',
-            'manifest_creation_time',
-            'workflow_complete_time',
-            'platform_json_save_time',
-        ),
-        allow_reuse=True, pre=True)(utils.normalize_time)
-    
-    _foraging_id_re: ClassVar[str] = (
-        r"([0-9,a-f]{8}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{12})"
-    )
-    
-    # auto-generated / ignored ------------------------------------------------------------- #
-    rig_id: str = np_config.Rig().id
-    wfl_version: float = 1.0
-
-    # pre-experiment ---------------------------------------------------------------------- #
-    workflow_start_time: str = pydantic.Field(
-        default_factory=lambda: utils.normalize_time(time.time())
-    )
-    operatorID: Optional[str] = ""
-    sessionID: Optional[str | int] = ""
-    mouseID: Optional[str | int] = ""
-    DiINotes: dict[str, int | str] = dict(
-        EndTime="", StartTime="", dii_description="", times_dipped=""
-    )
-    probe_A_DiI_depth: str = ""
-    probe_B_DiI_depth: str = ""
-    probe_C_DiI_depth: str = ""
-    probe_D_DiI_depth: str = ""
-    probe_E_DiI_depth: str = ""
-    probe_F_DiI_depth: str = ""
-    water_calibration_heights: list[float] = [0.0]
-    water_calibration_volumes: list[float] = [0.0]
-    mouse_weight_pre: str = ""
-    mouse_weight_pre_float: float = 0.0
-    HeadFrameEntryTime: str = ""
-    wheel_height: str = ""
-    CartridgeLowerTime: str = ""
-    ProbeInsertionStartTime: str = ""
-    ProbeInsertionCompleteTime: str = ""
-    InsertionNotes: dict = pydantic.Field(default_factory=dict)
-    ExperimentStartTime: str = ""
-    stimulus_name: str = ""
-    script_name: str = ""
-
-    # post-experiment ---------------------------------------------------------------------- #
-    ExperimentCompleteTime: str = ""
-    ExperimentNotes: dict[str, dict[str, Any]] = dict(
-        BleedingOnInsertion={}, BleedingOnRemoval={}
-    )
-    foraging_id: str = pydantic.Field(default="", regex=_foraging_id_re)
-    foraging_id_list: list[str] = pydantic.Field(
-        default_factory=lambda: [""], regex=_foraging_id_re
-    )
-    HeadFrameExitTime: str = ""
-    mouse_weight_post: str = ""
-    water_supplement: float = 0.0
-    files: dict[str, dict[str, str]] = pydantic.Field(default_factory=dict)
-    manifest_creation_time: str = ""
-    workflow_complete_time: str = ""
-    platform_json_save_time: str = ""
-
-
 class NewScaleCoordinateRecorder(JsonRecorder):
     "Gets current manipulator coordinates and stores them in a file with a timestamp."
 
@@ -1536,3 +1415,126 @@ class NewScaleCoordinateRecorder(JsonRecorder):
             cls.data_name = config["data_name"]
         if not hasattr(cls, "data_fieldnames"):
             cls.data_fieldnames = config["data_fieldnames"]
+
+
+class PlatformJsonWriter(pydantic.BaseModel):
+    """Writes D1 platform json for lims upload. Just requires a path (dir or dir+filename)."""
+
+    # ------------------------------------------------------------------------------------- #
+    # required kwargs on init: 
+    
+    path: pathlib.Path
+    "Typically the storage directory for the session. Will be modified on assignment."
+    
+    # ------------------------------------------------------------------------------------- #
+    
+    class Config:
+        validate_assignment = True # coerce types on assignment
+        extra = 'forbid' # properties must be defined in the model
+        fields = {'path': {'exclude': True}}
+        
+    suffix: ClassVar[str] = "_platformD1.json"
+    
+    def load_from_existing(self) -> None:
+        "Reads existing file and loads all non-empty fields to self."
+        if existing := json.loads(self.path.read_text() or "{}"):
+            for k, v in existing.items():
+                if v and v != getattr(self, k):
+                    setattr(self, k, v)
+        
+    def write(self, update_existing=True): 
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.path.touch()
+        if update_existing:
+            self.load_from_existing()
+        self.path.write_text(self.json(indent=4))
+        logger.debug("%s wrote to %s", self.__class__.__name__, self.path.as_posix())
+    
+    @pydantic.validator("path", pre=True)
+    def normalize_path(cls, v: str | pathlib.Path) -> pathlib.Path:
+        return np_config.normalize_path(v)
+    
+    @pydantic.validator("path")
+    def add_filename_to_path(cls, v: pathlib.Path) -> pathlib.Path:
+        name = cls.append_suffix_to_filename(v.name)
+        return v / name if v.is_dir() else v.with_name(name)
+    
+    @classmethod
+    def append_suffix_to_filename(cls, v: str) -> str:
+        if not v.endswith(cls.suffix):
+            v += cls.suffix
+        v.replace(".json.json", ".json")
+        return v
+
+    _normalize_time = pydantic.validator(
+        *(
+            'workflow_start_time',
+            'HeadFrameEntryTime',
+            'CartridgeLowerTime',
+            'ProbeInsertionStartTime',
+            'ProbeInsertionCompleteTime',
+            'ExperimentStartTime',
+            'ExperimentCompleteTime',
+            'HeadFrameExitTime',
+            'manifest_creation_time',
+            'workflow_complete_time',
+            'platform_json_save_time',
+        ),
+        allow_reuse=True, pre=True)(utils.normalize_time)
+    
+    _foraging_id_re: ClassVar[str] = (
+        r"([0-9,a-f]{8}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{4}-[0-9,a-f]{12})"
+    )
+    
+    # auto-generated / ignored ------------------------------------------------------------- #
+    rig_id: str = np_config.Rig().id
+    wfl_version: float = 1.0
+
+    # pre-experiment ---------------------------------------------------------------------- #
+    workflow_start_time: str = pydantic.Field(
+        default_factory=lambda: utils.normalize_time(time.time())
+    )
+    operatorID: Optional[str] = ""
+    sessionID: Optional[str | int] = ""
+    mouseID: Optional[str | int] = ""
+    DiINotes: dict[str, str | int] = dict(
+        EndTime="", StartTime="", dii_description="", times_dipped=""
+    )
+    probe_A_DiI_depth: str = ""
+    probe_B_DiI_depth: str = ""
+    probe_C_DiI_depth: str = ""
+    probe_D_DiI_depth: str = ""
+    probe_E_DiI_depth: str = ""
+    probe_F_DiI_depth: str = ""
+    water_calibration_heights: list[float] = [0.0]
+    water_calibration_volumes: list[float] = [0.0]
+    mouse_weight_pre: str = ""
+    mouse_weight_pre_float: float = 0.0
+    HeadFrameEntryTime: str = ""
+    wheel_height: str = ""
+    CartridgeLowerTime: str = ""
+    ProbeInsertionStartTime: str = ""
+    ProbeInsertionCompleteTime: str = ""
+    InsertionNotes: dict = pydantic.Field(default_factory=dict)
+    ExperimentStartTime: str = ""
+    stimulus_name: str = ""
+    script_name: str = ""
+
+    # post-experiment ---------------------------------------------------------------------- #
+    ExperimentCompleteTime: str = ""
+    ExperimentNotes: dict[str, dict[str, Any]] = dict(
+        BleedingOnInsertion={}, BleedingOnRemoval={}
+    )
+    foraging_id: str = pydantic.Field(default="", regex=_foraging_id_re)
+    foraging_id_list: list[str] = pydantic.Field(
+        default_factory=lambda: [""], regex=_foraging_id_re
+    )
+    HeadFrameExitTime: str = ""
+    mouse_weight_post: str = ""
+    water_supplement: float = 0.0
+    files: dict[str, dict[str, str]] = pydantic.Field(default_factory=dict)
+    manifest_creation_time: str = ""
+    workflow_complete_time: str = ""
+    platform_json_save_time: str = ""
+
+
