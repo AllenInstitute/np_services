@@ -80,7 +80,7 @@ def pretest() -> None:
         stop()
     finalize()
     validate()
-
+    logger.info("OpenEphys | Pretest passed")
 
 def url(endpoint: Endpoint):
     return f"http://{host}:{port}/api/{endpoint.value}"
