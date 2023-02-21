@@ -73,13 +73,26 @@ def start_rsc_apps() -> None:
 
 @contextlib.contextmanager
 def debug_logging() -> Generator[None, None, None]:
+    
     root_logger = logging.getLogger("root")
-    level_0 = root_logger.level
+    
+    logger_level_0 = root_logger.level
+    handler_level_0 = []
+    
     root_logger.setLevel(logging.DEBUG)
+    for handler in (_ for _ in root_logger.handlers if isinstance(_, logging.StreamHandler)):
+        handler_level_0 += [handler.level]
+        handler.setLevel(logging.DEBUG)
+        
     try:
         yield
     finally:
-        root_logger.setLevel(level_0)
+        root_logger.setLevel(logger_level_0)
+        for handler, level in zip(
+            (_ for _ in root_logger.handlers if isinstance(_, logging.StreamHandler)),
+            handler_level_0,
+        ):
+            handler.setLevel(level)
 
 
 @contextlib.contextmanager
