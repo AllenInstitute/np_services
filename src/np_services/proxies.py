@@ -1144,7 +1144,8 @@ class JsonRecorder:
             cls.initialize()
             cls.start()
             cls.validate()
-
+        logger.info("%s | Pretest passed", cls.__name__)
+        
     @classmethod
     def ensure_config(cls) -> None:
         config = CONFIG.get(
@@ -1406,7 +1407,12 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     "A label to tag each entry with"
     latest_start: ClassVar[int] = 0
     "`time.time()` when the service was last started via `start()`."
-
+    
+    @classmethod
+    def pretest(cls) -> None:
+        cls.label = 'pretest'
+        super().pretest()
+            
     @classmethod
     def get_current_data(cls) -> pathlib.Path:
         cls.ensure_config()
