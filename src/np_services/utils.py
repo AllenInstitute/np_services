@@ -83,19 +83,23 @@ def debug_logging() -> Generator[None, None, None]:
 
 
 @contextlib.contextmanager
-def stop_on_error(obj: protocols.Stoppable, reraise=True):
-    if not isinstance(obj, protocols.Stoppable):
-        raise TypeError(f"{obj} does not support stop()")
+def stop_on_error(objs: protocols.Stoppable | Sequence[protocols.Stoppable], reraise=True):
+    if not isinstance(objs, Sequence):
+        objs = (objs,)
+    for obj in objs:
+        if not isinstance(obj, protocols.Stoppable):
+            raise TypeError(f"{obj} does not support stop()")
     try:
         yield
     except Exception as exc:
         with contextlib.suppress(Exception):
-            obj.exc = exc
-            logger.info("%s interrupted by error:", obj.__name__, exc_info=exc)
-            obj.stop()
+            for obj in objs:
+                obj.stop()
+                logger.info("%s interrupted by error and stopped", obj.__name__)
+                obj.exc = exc
         if reraise:
             raise exc
-
+        logger.error("Error suppressed: continuing despite raised exception", exc_info=exc)
 
 @contextlib.contextmanager
 def suppress(*exceptions: Type[BaseException]):
