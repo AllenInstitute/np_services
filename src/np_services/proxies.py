@@ -12,6 +12,7 @@ import json  # loading config from Sync proxy will instantiate datetime objects
 import logging
 import pathlib
 import re
+import tempfile
 import time
 from typing import Any, ClassVar, Literal, Mapping, Optional, Sequence
 
@@ -1387,9 +1388,7 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     num_probes: ClassVar[int] = 6
     max_travel: ClassVar[float]
     log_name: ClassVar[str] = "newscale_coords_{}.json"
-    log_root: ClassVar[pathlib.Path] = pathlib.Path(
-        "."
-    ).resolve()  #! move to config after testing
+    log_root: ClassVar[pathlib.Path] = pathlib.Path(tempfile.gettempdir()).resolve()
     label: ClassVar[str] = ""
     "A label to tag each entry with"
     latest_start: ClassVar[int] = 0
