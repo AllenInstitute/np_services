@@ -821,12 +821,12 @@ class Cam3d(CamstimSyncShared):
         while (
             cls.is_started()
             or not (latest := cls.get_latest_data('*'))
-            or counter < 12
         ):
             time.sleep(1)
             counter += 1
-            if counter == 10:
+            if counter == 3:
                 cls.reenable_cameras()
+            break
         cls.data_files.extend(latest)
         logger.debug(f"{cls.__name__} | Images captured: {latest}")
         
