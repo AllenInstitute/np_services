@@ -1442,8 +1442,8 @@ class PlatformJsonWriter(pydantic.BaseModel):
     
     def load_from_existing(self) -> None:
         "Reads existing file and loads all non-empty fields to self."
-        if existing := json.loads(self.path.read_text() or "{}"):
-            for k, v in existing.items():
+        if self.path.exists() and (contents := json.loads(self.path.read_text() or "{}")):
+            for k, v in contents.items():
                 if v and v != getattr(self, k):
                     setattr(self, k, v)
         
@@ -1452,6 +1452,7 @@ class PlatformJsonWriter(pydantic.BaseModel):
         self.path.touch()
         if update_existing:
             self.load_from_existing()
+        self.platform_json_save_time = utils.normalize_time(time.time())
         self.path.write_text(self.json(indent=4))
         logger.debug("%s wrote to %s", self.__class__.__name__, self.path.as_posix())
     
