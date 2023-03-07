@@ -21,6 +21,7 @@ fabric = "^2.7"
 pydantic = "^1.10"
 pandas = "^1.5.3"
 h5py = "^3.8.0"
+np_config = ">=0.4.17"
 
 [tool.poetry.group.dev.dependencies]
 pip-tools = "*"
