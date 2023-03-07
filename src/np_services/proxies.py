@@ -449,7 +449,7 @@ class Sync(CamstimSyncShared):
                 f"{cls.__name__} latest data file is not increasing in size: {cls.get_latest_data()[-1]}"
             )
         logger.info("%s | Verified: file on disk is increasing in size", cls.__name__)
-
+        
     @classmethod
     def full_validation(cls, data: pathlib.Path) -> None:
         line_labels: dict = cls.get_config()["line_labels"]
@@ -1097,7 +1097,7 @@ class VideoMVR(MVR):
     def stop(cls) -> None:
         cls.get_proxy().stop_record()
         logger.info("%s | Stopped recording", cls.__name__)
-
+        
     @classmethod
     def is_started(cls) -> bool:
         if len(state := cls.get_state()) and all(
@@ -1175,7 +1175,7 @@ class JsonRecorder:
         cls.initialization = time.time()
         log = (cls.log_root / cls.log_name).with_suffix(".json")
         log.parent.mkdir(parents=True, exist_ok=True)
-        log.touch()
+        log.touch(exist_ok=True)
         cls.all_files = [log]
         cls.test()
 
@@ -1183,7 +1183,7 @@ class JsonRecorder:
     def test(cls) -> None:
         logger.debug("%s testing", __class__.__name__)
         try:
-            _ = cls.get_current_log().open("w")
+            _ = cls.get_current_log().read_bytes()
         except OSError as exc:
             raise TestError(
                 f"{__class__.__name__} failed to open {cls.get_current_log()}"
@@ -1199,12 +1199,13 @@ class JsonRecorder:
     def read(cls) -> dict[str, str | float]:
         try:
             data = json.loads(cls.get_current_log().read_bytes())
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
             if cls.get_current_log().stat().st_size:
                 raise
+            logger.debug("%s | Error encountered reading file %s: %r", cls.__name__, cls.get_current_log(), exc)
             data = {}  # file was empty
         else:
-            logger.debug("%s read from %s", cls.__name__, cls.get_current_log())
+            logger.debug("%s | Read from %s", cls.__name__, cls.get_current_log())
         return data
 
     @classmethod
@@ -1218,7 +1219,8 @@ class JsonRecorder:
             cls.all_files.append(file)
         else:
             file = cls.get_current_log()
-        data.update(value)
+        for k, v in value.items():
+            data.setdefault(k, data.get(k, {}).update(v))
         file.write_text(json.dumps(data, indent=4, sort_keys=False, default=str))
         logger.debug("%s wrote to %s", cls.__name__, file)
 
@@ -1358,8 +1360,16 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     @classmethod
     def start(cls):
         cls.latest_start = time.time()
-        cls.write({str(datetime.datetime.now()): cls.get_coordinates()})
-
+        if 'platformD1' in cls.log_name:
+            coords = cls.get_coordinates()
+            print(coords)
+            for k, v in coords.items():
+                if isinstance(v, Mapping) and v.get('last_moved'):
+                    coords[k]['last_moved'] = np_config.normalize_time(datetime.datetime.strptime(v['last_moved'], '%Y/%m/%d %H:%M:%S.%f'))
+            cls.write({'manipulator_coordinates': {np_config.normalize_time(cls.latest_start): coords}})
+        else: 
+            cls.write({str(datetime.datetime.now()): cls.get_coordinates()})
+                
     @classmethod
     def test(cls) -> None:
         super().test()
