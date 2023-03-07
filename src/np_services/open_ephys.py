@@ -126,6 +126,7 @@ def is_connected() -> bool:
 def initialize() -> None:
     logger.info("OpenEphys | Initializing")
     launch()
+    
     global data_files
     data_files = []
     global initialized
@@ -171,6 +172,7 @@ def test() -> None:
         raise TestError(
             f"{__name} free disk space on one or more recording drives doesn't meet minimum of {gb} GB"
         ) from exc
+    unlock_previous_recording()
 
 
 def is_started() -> bool:
@@ -260,7 +262,7 @@ def set_idle():
 
 
 def unlock_previous_recording():
-    "stop rec/acquiring | set name to _temp_ | record briefly | acquire"
+    "stop rec/acquiring | set name to _temp_ | record briefly | acquire | set name to folder"
     logger.debug("OpenEphys | Unlocking previous recording")
     set_idle()
     time.sleep(0.5)
@@ -270,6 +272,7 @@ def unlock_previous_recording():
     time.sleep(0.5)
     stop()
     time.sleep(0.5)
+    set_folder(folder)
 
 
 def get_record_nodes() -> list[dict[str, Any]]:
