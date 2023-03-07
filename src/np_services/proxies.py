@@ -136,7 +136,7 @@ class Proxy(abc.ABC):
         if cls.data_root:
             cls.data_files = []
         cls.initialization = time.time()
-        logger.info("%s initialized: ready for use", cls.__name__)
+        logger.info("%s(%s) initialized: ready for use", __class__.__name__, cls.__name__)
 
     @classmethod
     def test(cls) -> None:
@@ -154,7 +154,7 @@ class Proxy(abc.ABC):
             raise TestError(
                 f"{cls.__name__} free disk space on {cls.data_root.drive} doesn't meet minimum of {gb} GB"
             ) from cls.exc
-        logger.debug("%s tested successfully", cls.__name__)
+        logger.debug("%s(%s) tested successfully", __class__.__name__, cls.__name__)
 
     @classmethod
     def get_proxy(cls) -> zro.DeviceProxy:
@@ -293,7 +293,7 @@ class CamstimSyncShared(Proxy):
     @classmethod
     def pretest(cls) -> None:
         "Test all critical functions"
-        with utils.debug_logging():
+        with np_logging.debug():
             logger.debug("Starting %s pretest", cls.__name__)
             cls.initialize()  # calls test()
 
@@ -320,6 +320,7 @@ class CamstimSyncShared(Proxy):
     def stop(cls) -> None:
         logger.debug("Stopping %s", cls.__name__)
         cls.get_proxy().stop()
+        logger.info("%s | Stopped recording", cls.__name__)
 
     # --- End of possible Camstim/Sync shared methods ---
 
@@ -447,7 +448,7 @@ class Sync(CamstimSyncShared):
             raise AssertionError(
                 f"{cls.__name__} latest data file is not increasing in size: {cls.get_latest_data()[-1]}"
             )
-        logger.debug("%s latest data file is increasing in size", cls.__name__)
+        logger.info("%s | Verified: file on disk is increasing in size", cls.__name__)
 
     @classmethod
     def full_validation(cls, data: pathlib.Path) -> None:
@@ -714,7 +715,7 @@ class MouseDirector(Proxy):
     
     @classmethod
     def pretest(cls):
-        with utils.debug_logging():
+        with np_logging.debug():
             logger.debug(f"{cls.__name__} | Pretest")
             cls.user = "ben.hardcastle"
             cls.mouse = 366122
@@ -835,8 +836,12 @@ class Cam3d(CamstimSyncShared):
             raise AssertionError(f"{cls.__name__} | Expected 2 images, got {len(latest)}: {latest}")
 
     @classmethod
+    def stop(cls):
+        logger.debug("%s | `stop()` not implemented", cls.__name__)
+        
+    @classmethod
     def pretest(cls):
-        with utils.debug_logging():
+        with np_logging.debug():
             logger.debug(f"{cls.__name__} | Pretest")
             cls.label = 'pretest'
             cls.initialize()
@@ -1085,13 +1090,13 @@ class VideoMVR(MVR):
             raise AssertionError(
                 f"{cls.__name__} files do not match the number of cameras: {files}"
             )
-        logger.debug(
-            "%s verified: %s cameras recording to disk", cls.__name__, len(files)
+        logger.info(
+            "%s | Verified: %s cameras recording to disk", cls.__name__, len(files)
         )
-
     @classmethod
     def stop(cls) -> None:
         cls.get_proxy().stop_record()
+        logger.info("%s | Stopped recording", cls.__name__)
 
     @classmethod
     def is_started(cls) -> bool:
@@ -1140,7 +1145,7 @@ class JsonRecorder:
     
     @classmethod
     def pretest(cls) -> None:
-        with utils.debug_logging():
+        with np_logging.debug():
             cls.initialize()
             cls.start()
             cls.validate()
@@ -1498,7 +1503,7 @@ class PlatformJsonWriter(pydantic.BaseModel):
     sessionID: Optional[str | int] = ""
     mouseID: Optional[str | int] = ""
     DiINotes: dict[str, str | int] = dict(
-        EndTime="", StartTime="", dii_description="", times_dipped=""
+        EndTime="", StartTime="", dii_description="", times_dipped="", previous_uses="",
     )
     probe_A_DiI_depth: str = ""
     probe_B_DiI_depth: str = ""
@@ -1510,6 +1515,7 @@ class PlatformJsonWriter(pydantic.BaseModel):
     water_calibration_volumes: list[float] = [0.0]
     mouse_weight_pre: str = ""
     mouse_weight_pre_float: float = 0.0
+    
     HeadFrameEntryTime: str = ""
     wheel_height: str = ""
     CartridgeLowerTime: str = ""
@@ -1535,6 +1541,8 @@ class PlatformJsonWriter(pydantic.BaseModel):
     files: dict[str, dict[str, str]] = pydantic.Field(default_factory=dict)
     manifest_creation_time: str = ""
     workflow_complete_time: str = ""
+    
     platform_json_save_time: str = ""
+    "Updated on write."
 
 
