@@ -1263,36 +1263,19 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     "Gets current manipulator coordinates and stores them in a file with a timestamp."
 
     host: ClassVar[str] = np_config.Rig().Mon
-    data_root: ClassVar[pathlib.Path]
-    data_name: ClassVar[str] = "log.csv"
-    data_fieldnames: ClassVar[Sequence[str]] = (
-        "last_moved",
-        "manipulator",
-        "x_virtual",
-        "y_virtual",
-        "z_virtual",
-        "x",
-        "y",
-        "z",
-    ) if np_config.Rig().idx == 0 else (
-        "last_moved",
-        "manipulator",
-        "x",
-        "y",
-        "z",
-        "x_virtual",
-        "y_virtual",
-        "z_virtual",
-    )
-    max_z_travel: ClassVar[int] = 6000 # seems to be the config for NP0, despite short-travel manipulators
+    data_root: ClassVar[pathlib.Path] = CONFIG['NewScaleCoordinateRecorder']['data']
+    data_name: ClassVar[str] = CONFIG['NewScaleCoordinateRecorder']['data_name']
+    data_fieldnames: ClassVar[Sequence[str]] = CONFIG['NewScaleCoordinateRecorder']['data_fieldnames']
+    
+    max_z_travel: ClassVar[int] = CONFIG['NewScaleCoordinateRecorder']['max_z_travel']
     num_probes: ClassVar[int] = 6
-    max_travel: ClassVar[float]
     log_name: ClassVar[str] = "newscale_coords_{}.json"
     log_root: ClassVar[pathlib.Path] = pathlib.Path(tempfile.gettempdir()).resolve()
     label: ClassVar[str] = ""
     "A label to tag each entry with"
     latest_start: ClassVar[int] = 0
     "`time.time()` when the service was last started via `start()`."
+    log_time_fmt: str = CONFIG['NewScaleCoordinateRecorder']['log_time_fmt']
     
     @classmethod
     def pretest(cls) -> None:
@@ -1328,16 +1311,28 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     @classmethod
     def last_logged_coords_pd(cls) -> dict[str, float]:
         "Get the most recent coordinates from the log file using pandas."
-        df = pd.read_csv(cls.get_current_data(), names=cls.data_fieldnames)
         coords = {}
         manipulator_label = cls.data_fieldnames[1]
         last_moved_label = cls.data_fieldnames[0]
-        for manipulator_serial_num, rows in df.groupby(manipulator_label): 
-            rows.sort_values(by=last_moved_label, ascending=False, inplace=True) 
-            new = {key: dict(rows.iloc[0])[key] for key in cls.data_fieldnames if (key != manipulator_label and 'virtual' not in key)}
-            coords[str(manipulator_serial_num).strip()] = new
+        df = pd.read_csv(cls.get_current_data(), names=cls.data_fieldnames, parse_dates=[last_moved_label])
+        # group by manipulator_label and get the maximum value in last_moved_label for each group 
+        # (i.e. the most recent entry for each manipulator)
+        last_moved = df.loc[
+                df.groupby(manipulator_label)[last_moved_label].idxmax()
+            ].set_index(manipulator_label).sort_values(last_moved_label, ascending=False)
+        for serial_number, row in last_moved.iloc[:cls.num_probes].iterrows(): 
+            new = {key: row[key] for key in cls.data_fieldnames if (key != manipulator_label)}
+            new[last_moved_label] = row[last_moved_label].to_pydatetime()
+            coords[str(serial_number).strip()] = new
         return coords
 
+    @classmethod
+    def convert_serial_numbers_to_probe_labels(cls, coords: dict[str, float]) -> None:
+        for k, v in CONFIG[cls.__name__].get("probe_to_serial_number", {}).items():
+            if v in coords:
+                coords[k] = coords.pop(v)
+                coords[k]['serial_number'] = v
+                
     @classmethod
     def get_coordinates(cls) -> dict[str, float]:
         try:
@@ -1352,28 +1347,36 @@ class NewScaleCoordinateRecorder(JsonRecorder):
                 if 'z' in v:
                     v['z'] = cls.max_z_travel - v['z']
         adjust_z_travel(coords)
-        
+        cls.convert_serial_numbers_to_probe_labels(coords)
         coords["label"] = cls.label
-        logger.debug("%s retrieved coordinates: %s", cls.__name__, coords)
+        logger.debug("%s | Retrieved coordinates: %s", cls.__name__, coords)
         return coords
 
+    @classmethod
+    def write_to_platform_json(cls):
+        coords = cls.get_coordinates()
+        for k, v in coords.items():
+            if isinstance(v, Mapping) and (last_moved := v.get('last_moved')):
+                match last_moved:
+                    case str():
+                        timestamp = datetime.datetime.strptime(last_moved, cls.log_time_fmt)
+                    case datetime.datetime():
+                        timestamp = last_moved
+                coords[k]['last_moved'] = np_config.normalize_time(timestamp)
+        cls.write({'manipulator_coordinates': {np_config.normalize_time(cls.latest_start): coords}})
+        
     @classmethod
     def start(cls):
         cls.latest_start = time.time()
         if 'platformD1' in cls.log_name:
-            coords = cls.get_coordinates()
-            print(coords)
-            for k, v in coords.items():
-                if isinstance(v, Mapping) and v.get('last_moved'):
-                    coords[k]['last_moved'] = np_config.normalize_time(datetime.datetime.strptime(v['last_moved'], '%Y/%m/%d %H:%M:%S.%f'))
-            cls.write({'manipulator_coordinates': {np_config.normalize_time(cls.latest_start): coords}})
+            cls.write_to_platform_json()
         else: 
             cls.write({str(datetime.datetime.now()): cls.get_coordinates()})
                 
     @classmethod
     def test(cls) -> None:
         super().test()
-        logger.debug("%s testing", __class__.__name__)
+        logger.debug("%s | Testing", __class__.__name__)
         try:
             _ = cls.get_current_data().open("r")
         except OSError as exc:
@@ -1385,7 +1388,7 @@ class NewScaleCoordinateRecorder(JsonRecorder):
         except Exception as exc:
             raise TestError(f"{cls.__name__} failed to get coordinates") from exc
         else:
-            logger.info("%s test passed", cls.__name__)
+            logger.info("%s | Test passed", cls.__name__)
 
     @classmethod
     def ensure_config(cls) -> None:
