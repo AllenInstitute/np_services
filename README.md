@@ -13,17 +13,17 @@ For example, operating a stimulus device typically requires:
 
 with specific code for each task, executed at specific points during an experiment. To switch to a completely different stimulus would likely require modifying code throughout the experiment script - so much that it might be faster to just start-over with a new script based around the new stimulus.
 
-Although swapping out a device might only happen rarely, a high-degree of coupling makes it generally difficult to modify any part of the code without knock-on affects in other parts. Maintainance and fixing small bugs can require knowledge of the codebase in its entirety, and the more complex the experiment (in number of components and tasks), the more complicated the code becomes and the less inclined we are to make any changes once it works. The weight of this sort of code can completely discourage us from trying new experiments.
+Although swapping out a device might only happen rarely, a high-degree of coupling makes it generally difficult to modify any part of the code without knock-on affects in other parts. Maintaining and fixing it then requires knowledge of the codebase in its entirety. As the experiment become more complex (in number of components and tasks), the code becomes more complicated, and we become reluctant to make any changes once it works. The weight of the existing code can completely discourage us from trying new experiments.
 
 <p><a href="https://commons.wikimedia.org/wiki/File:CouplingVsCohesion.svg#/media/File:CouplingVsCohesion.svg"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/CouplingVsCohesion.svg" alt="CouplingVsCohesion.svg" height="360"></a><br>Fig. 1 - High coupling between modules of code with different responsibilities makes it harder to modify, extend, fix bugs, or hand over to others. <i>Image credit: Евгений Мирошниченко, <a href="http://creativecommons.org/publicdomain/zero/1.0/deed.en" title="Creative Commons Zero, Public Domain Dedication">CC0</a>, <a href="https://commons.wikimedia.org/w/index.php?curid=104043458">Link</a></i></p>
 
-We need to move from b) to a) in the image above: the code for the stimulus device on the right is isolated from the experiment logic on the left; if necessary the module on the right could be swapped out completely without modifying any code on the left. To achieve this, we need to create **a simple, common set of commands for all the devices used**.
-The implementation details of each device's tasks need to be moved out of the experiment script and into cohesive, self-contained modules, which can be called through a minimal set of functions: an "interface", like the line connecting the two modules shown in a).
+We need to move from b) to a) in the image above: the code for the stimulus device on the right is isolated from the experiment logic on the left; if necessary the module on the right could be swapped out completely without modifying any code on the left. To achieve this, we need to create **a simple, common set of commands for all the components of the experiment**.
+The implementation details of each component's tasks need to be moved out of the experiment script and into cohesive, self-contained modules, which can be called through a minimal set of functions: the "interface" connecting the two modules shown in a).
 
 ## Aims
 The aim of this document is to provide practical advice and guidelines to help simplify the coordination of complex experiments. 
 
-We've tried to create a framework that's as flexible and widely-applicable as possible. In our own experiments, all of the devices and services could be made to conform. If new difficulties arise, we'll further refine the design.
+We've tried to create a framework that's as flexible and widely-applicable as possible. In our own experiments, all of the devices and services used could be made to conform to the framework. If any parts become problematic, we'll further refine the design.
 
 Examples are written in Python, and some of the solutions use specific features of the language added in Python 3.8, but the concepts could be implemented in Matlab or any other general-purpose language.
 
@@ -37,7 +37,9 @@ Each will be implemented as a function that commands the component to carry out 
 
 Each function will only be called after the preceding ones have finished.
 
-***
+
+![Services](./services.drawio.svg)
+
 
 `initialize()` 
 > *Run all setup and configuration to effectively reset the component for fresh use.*
@@ -60,7 +62,7 @@ Each function will only be called after the preceding ones have finished.
 ***
 
 `start()`
->*Trigger the component's primary purpose.*
+>*Trigger the component's primary effect.*
 
 - start data acquisition 
 - start stimulus presentation
@@ -104,8 +106,7 @@ After `finalize()`, the component may be reused by looping back to `initialize()
 - close associated software, computers
 - switch off power, lights, etc.
 
-![Services](./services.drawio.svg)
-
+***
 
 ### Extra
 
@@ -131,15 +132,25 @@ Typically, `pretest()` would be run any time changes are made to hardware or sof
 ***
 
 ### Rejected
-The following functions were tried, but found to be unnecessary.
+The following functions were tried at one point, but found to be unnecessary.
 
-`prime()` *Prime the component for imminent start.*
+***
 
-> If priming a device is necessary, it can be handled within `initialize()` or `start()`
+`prime()` 
 
-`configure()` *Get and apply configuration to device.*
-> Configuration is one of the responsbilities of `initialize()` and needn't require it's own command
+> *Prime the component for imminent start.*
 
+If priming a device is necessary, it can be handled within `initialize()` or `start()`
+
+***
+
+`configure()`
+
+> *Get and apply configuration to device.*
+
+Configuration is one of the responsbilities of `initialize()` and needn't require it's own command
+
+***
 
 ### Zero input arguments 
 ## Nouns == Devices == Modules or Classes
