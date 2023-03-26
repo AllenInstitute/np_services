@@ -95,7 +95,7 @@ It's desirable to be able to check whether `start()` has already been called on 
 - await processing, conversion
 - move, rename, backup data
 
-After `finalize()`, the component may be reused by looping back to `initialize()` or `start()`.
+After `finalize()`, the component should be ready for re-use by looping back to `start()` or `initialize()`.
 
 ***
 
