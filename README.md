@@ -69,7 +69,7 @@ Each function will only be called after the preceding ones have finished.
 - start video recording
 - take a single snapshot
 
-It's desirable to be able to check whether `start()` has already been called on the component. If this information can't be obtained from the device, a flag should be set when `start()` runs. Then, if `start()` were to be called twice by accident, you can decide whether to stop and restart, raise an error, or do nothing. 
+It's desirable to be able to check whether `start()` has already been called on the component. If this information can't be obtained from the device, a flag should be set when `start()` runs. Then, if `start()` is called twice by accident, you can decide whether to stop and restart, raise an error, or do nothing. 
 
 ***
 
