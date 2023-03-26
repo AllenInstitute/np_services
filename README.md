@@ -3,6 +3,7 @@ Todo:
 - converge on one term: component, device, service
 - update diagram and break into parts
 - add white background to wikipedia figure
+- add cost of failure to motivation
 
 ## **Motivation**
 Experiments require control and coordination of DAQs, video cameras, stimulus devices - each with their own specific set of function calls. 
@@ -34,7 +35,7 @@ We've tried to create a framework that's as flexible and widely-applicable as po
 
 Examples are written in Python using object-oriented programming paradigms, but the concepts could be implemented in Matlab or other general-purpose languages.
 
-## **Verbs/Commands == Tasks == Functions**
+## **Verbs/Commands == Tasks == Functions/Methods**
 To create a common set of commands for all components of the experiment, we need to constrain when and in which order they will be executed.
 
 ### **Core**
@@ -45,7 +46,7 @@ Each task will be implemented as a function that commands the component to carry
 Each function will only be called after the preceding ones have finished. Not all functions necessarily need to be implemented for every component, but the functions that are implemented will be called in a consistent order. 
 
 
-![Services](./services.drawio.svg)
+![Core](./core.drawio.svg)
 
 
 `initialize()` 
@@ -185,6 +186,7 @@ Configuration is one of the responsbilities of `initialize()` and doesn't requir
 
 ## **Nouns == Devices == Modules or Classes**
 ***
+- knowing whether a component has a particular command
 ### Multi-use devices -> multiple nouns
 Video camera plus snapshot camera, make two separate classes
 ## Tips
