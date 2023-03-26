@@ -1,5 +1,10 @@
 # Bensai
-## Motivation
+Todo:
+- converge on one term: component, device, service
+- update diagram and break into parts
+- add white background to wikipedia figure
+
+## **Motivation**
 Experiments require control and coordination of DAQs, video cameras, stimulus devices - each with their own specific set of function calls. 
 - as a result, scripts for running an experiment become highly "coupled" to the device libraries used.
 
@@ -15,27 +20,27 @@ with specific code for each task, executed at specific points during an experime
 
 Although swapping out a device might only happen rarely, a high-degree of coupling makes it generally difficult to modify any part of the code without knock-on effects in other parts. Maintainance requires knowledge of the codebase in its entirety. As the experiment becomes more complex (in number of components and tasks), the code becomes more complicated, and we become reluctant to make any changes once it works. The weight of the existing code can completely discourage us from trying new experiments.
 
-<p><a href="https://commons.wikimedia.org/wiki/File:CouplingVsCohesion.svg#/media/File:CouplingVsCohesion.svg"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/CouplingVsCohesion.svg" alt="CouplingVsCohesion.svg" height="360"></a><br>Fig. 1 - High coupling between modules of code with different responsibilities makes it harder to modify, extend, fix bugs, or hand over to others. <i>Image credit: Евгений Мирошниченко, <a href="http://creativecommons.org/publicdomain/zero/1.0/deed.en" title="Creative Commons Zero, Public Domain Dedication">CC0</a>, <a href="https://commons.wikimedia.org/w/index.php?curid=104043458">Link</a></i></p>
+<p><a href="https://commons.wikimedia.org/wiki/File:CouplingVsCohesion.svg#/media/File:CouplingVsCohesion.svg"><img src="https://upload.wikimedia.org/wikipedia/commons/0/09/CouplingVsCohesion.svg" alt="CouplingVsCohesion.svg" height="360"></a><br>Fig. 1: a) The ideal organization separates modules of code by their responsibilities and joins them with a clean interface. b) High coupling between modules of code makes it harder to modify, extend, or fix bugs. It also becomes more difficult to understand. <i>Image credit: Евгений Мирошниченко, <a href="http://creativecommons.org/publicdomain/zero/1.0/deed.en" title="Creative Commons Zero, Public Domain Dedication">CC0</a>, <a href="https://commons.wikimedia.org/w/index.php?curid=104043458">Link</a></i></p>
 
 We need to move from b) to a) in the image above: the code for the stimulus device on the right is isolated from the experiment logic on the left; if necessary the module on the right could be swapped out completely without modifying any code on the left. To achieve this, we need to create **a simple, common set of commands for all the components of the experiment**.
 The implementation details of each component's tasks need to be moved out of the experiment script and into cohesive, self-contained modules, which can be called through a minimal set of functions: the "interface" connecting the two modules shown in a).
 
-## Aims
+## **Aims**
 The aim of this document is to provide practical advice and guidelines to help simplify the coordination of complex experiments. 
 
-We've tried to create a framework that's as flexible and widely-applicable as possible. In our own experiments, all of the devices and services used could be made to conform to the framework. If any parts become problematic, we'll further refine the design.
+We've tried to create a framework that's as flexible and widely-applicable as possible. In our own experiments, all of the devices and services used could be made to conform to this framework. If any parts become problematic, we'll further refine the design.
 
-Examples are written in Python, and some of the solutions use specific features of the language added in Python 3.8, but the concepts could be implemented in Matlab or any other general-purpose language.
+Examples are written in Python using object-oriented programming paradigms, but the concepts could be implemented in Matlab or other general-purpose languages.
 
-## Verbs/Commands == Tasks == Functions
+## **Verbs/Commands == Tasks == Functions**
 To create a common set of commands for all components of the experiment, we need to constrain when and in which order they will be executed.
 
-### Core
-The following core tasks comprise the life-cycle of a component in an experiment (not all tasks necessarily need to be implemented for every component). 
+### **Core**
+The following core tasks comprise the life-cycle of a component in an experiment. 
 
-Each will be implemented as a function that commands the component to carry out any necessary sub-tasks. 
+Each task will be implemented as a function that commands the component to carry out any necessary sub-tasks. 
 
-Each function will only be called after the preceding ones have finished.
+Each function will only be called after the preceding ones have finished. Not all functions necessarily need to be implemented for every component, but the functions that are implemented will be called in a consistent order. 
 
 
 ![Services](./services.drawio.svg)
@@ -106,11 +111,39 @@ After `finalize()`, the component should be ready for re-use by looping back to 
 - close associated software, computers
 - switch off power, lights, etc.
 
+
+### **Functions with zero input arguments**
 ***
+The most important feature of the functions described above is that they should have **no input arguments in their signature**. 
 
-### Extra
+We'll discuss how to achieve this in the next section on modules and classes.
 
-These additional commands don't strictly need to be called within the experiment workflow:
+Enforcing this constraint will allow us to command any component of our experiment in the exact same way from our main experiment script.
+
+As an example, let's say we have 5 components in our  experiment:
+
+```python
+components = (CameraA, CameraB, DAQ, EphysRec, VisualStim)
+```
+
+The initial setup of these components in our experiment script then becomes as simple as:
+
+```python
+for component in components:
+    component.initialize()
+    component.test()
+```
+
+There are no details about *how* each component is initialized or tested: we trust that the specifc code for those tasks is handled correctly elsewhere. 
+
+Here, we only care about *what* happens and *when*. 
+
+If `initialize()` or `test()` required input arguments, we'd need to supply them in the setup loop above. The specifics of each component would need to be known, and the loop becomes more complicated. The details of *how* the tasks happen start to creep into our experiment script...
+
+
+### **Extra**
+***
+These additional commands have also proved necessary for most components but, unlike the "core" commands above, don't strictly need to be executed at specific times in the experiment workflow. They can be thought of as a separate, pre-experiment workflow:
 
 `pretest()`
 > *Comprehensively test component functionality by running all other functions.*
@@ -129,18 +162,15 @@ Typically, `pretest()` would be run any time changes are made to hardware or sof
 - check files can be opened
 - check contents  
 
-***
 
-### Rejected
-The following functions were tried at one point, but found to be unnecessary.
-
+### **Rejected commands**
 ***
+The following functions were trialled, then later removed for the reasons summarized here:
 
 `prime()` 
-
 > *Prime the component for imminent start.*
 
-If priming a device is necessary, it can be handled within `initialize()` or `start()`
+This was only rarely useful. If priming a device is necessary, it can be handled within `initialize()` or `start()`
 
 ***
 
@@ -148,12 +178,11 @@ If priming a device is necessary, it can be handled within `initialize()` or `st
 
 > *Get and apply configuration to device.*
 
-Configuration is one of the responsbilities of `initialize()` and needn't require it's own command
+Configuration is one of the responsbilities of `initialize()` and doesn't require it's own command. We might also be tempted to supply a set of configuration parameters as an input argument to `configure()` - something we're aiming to avoid.
 
+
+## **Nouns == Devices == Modules or Classes**
 ***
-
-### Zero input arguments 
-## Nouns == Devices == Modules or Classes
 ### Multi-use devices -> multiple nouns
 Video camera plus snapshot camera, make two separate classes
 ## Tips
