@@ -31,23 +31,34 @@ The implementation details of each component's tasks should be moved out of the 
 ## **Aims**
 The aim of this document is to provide practical advice and guidelines to help simplify the coordination of complex experiments. 
 
-We've tried to create a framework that's as flexible and widely-applicable as possible. In our own experiments, all of the devices and services used could be made to conform to this framework. If any parts become problematic, we'll further refine the design.
+We've tried to create a framework that's as minimalistic, flexible, and widely-applicable as possible. In our own experiments, it was straightforward to make all of the devices and services we use conform to this framework. It isn't a library of code that you need to start using: more like a series of good coding practices that we've found to be helpful.
 
 Examples are written in Python using object-oriented programming paradigms, but the concepts could be implemented in Matlab or other general-purpose languages.
 
+## **Nomenclature**
+
+- experiment script: the highest-level piece of code that the experimenter will interact with, which coordinates all aspects of the experiment
+
+
 ## **Verbs/Commands == Tasks == Functions/Methods**
-To create a common set of commands for all components of the experiment, we need to constrain when and in which order they will be executed.
+Within our main experiment script, we issue commands to setup devices, start recordings, start stimuli, then later wrap up and take care of data that were generated. These commands are the verbs in the grammar of our exeperiment workflow: prepare, start, stop, finalize. Each is instructing a component to carry out some task.
 
-### **Core**
-The following core tasks comprise the life-cycle of a component in an experiment. 
+We wish to create a common set of commands for all of the components of the experiment, but do so the commands must necessarily be quite vague. The precise details of starting a DAQ may be quite different to starting a video camera - but at the level of our experiment script we only need to know that both are started at the correct times. 
 
-Each task will be implemented as a function that commands the component to carry out any necessary sub-tasks. 
+We therefore also need to have a pre-defined sequence in which the commands will be executed.
 
-Each function will only be called after the preceding ones have finished. Not all functions necessarily need to be implemented for every component, but the functions that are implemented will be called in a consistent order. 
+The following core commands comprise the life-cycle of a component in an experiment. 
+
+- each command will be implemented as a function that commands the component to carry out any necessary tasks. 
+
+- each function will only be called after the preceding ones have finished. 
+
+- not all functions necessarily need to be implemented for every component, but the functions that are implemented will be called in a consistent order. 
 
 
 ![Core](./core.drawio.svg)
 
+Fig. 2: Command functions for a component or device. **Left:** Core commands are executed with a fixed order. Experiments with multiple trials might loop over inner commands. **Right:** The `pretest()` command should execute all of the commands used in the experiment.
 
 `initialize()` 
 > *Run all setup and configuration to effectively reset the component for fresh use.*
