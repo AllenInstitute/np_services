@@ -213,7 +213,7 @@ components = (CameraA, CameraB, DAQ, EphysRec, VisualStim)
 
 Each component is a noun: a thing which possesses functions such as `initialize()`, `start()`, `stop()`.
 
-In object-oriented programming, these nouns are implemented as *classes*, from which *objects* are created - which contain data and functions
+In object-oriented programming, these nouns are implemented as *classes*, from which *objects* are created - objects contain data and functions
 (*data* in the computing sense: numbers, text, filepaths, booleans... not necessarily the experimental data we're collecting, just information that the object can use to do its job).
 
 Here's a 
