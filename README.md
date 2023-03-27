@@ -31,19 +31,25 @@ The implementation details of each component's tasks should be moved out of the 
 ## **Aims**
 The aim of this document is to provide practical advice and guidelines to help simplify the coordination of complex experiments. 
 
-We've tried to create a framework that's as minimalistic, flexible, and widely-applicable as possible. In our own experiments, it was straightforward to make all of the devices and services we use conform to this framework. It isn't a library of code that you need to start using: more like a series of good coding practices that we've found to be helpful.
+We've tried to create a framework that's as minimalistic, flexible, and widely-applicable as possible. In our own experiments, it was straightforward to make all of the devices and services we use conform to this framework. It isn't a library of code that you need to learn and start using: more like a series of good practices that we've found to be helpful in keeping code manageable.
 
-Examples are written in Python using object-oriented programming paradigms, but the concepts could be implemented in Matlab or other general-purpose languages.
+Examples are written in Python using object-oriented programming paradigms, but the concepts will transfer to Matlab or other general-purpose languages.
 
 ## **Nomenclature**
 
-- experiment script: the highest-level piece of code that the experimenter will interact with, which coordinates all aspects of the experiment
+- *experiment script* - the top-level piece of code that the experimenter interacts with, which coordinates all aspects of the experiment.
 
+- *function* - a unit of code that carries out some work.
+
+- *object* - a unit of code which contains data, and functions that use that data.
+
+- *class* - a unit of code that defines the data and functions than an object contains, like a set of instructions.
+Objects are said to be *instances* of a particular class.
 
 ## **Verbs/Commands == Tasks == Functions/Methods**
 Within our main experiment script, we issue commands to setup devices, start recordings, start stimuli, then later wrap up and take care of data that were generated. These commands are the verbs in the grammar of our exeperiment workflow: prepare, start, stop, finalize. Each is instructing a component to carry out some task.
 
-We wish to create a common set of commands for all of the components of the experiment, but do so the commands must necessarily be quite vague. The precise details of starting a DAQ may be quite different to starting a video camera - but at the level of our experiment script we only need to know that both are started at the correct times. 
+We wish to create a common set of commands, or interface, for all of the components of the experiment, but do so the commands must necessarily be quite vague. The precise details of starting a DAQ may be quite different to starting a video camera - but at the level of our experiment script we only need to know that both are started at the correct times. 
 
 We therefore also need to have a pre-defined sequence in which the commands will be executed.
 
@@ -197,6 +203,24 @@ Configuration is one of the responsbilities of `initialize()` and doesn't requir
 
 ## **Nouns == Devices == Modules or Classes**
 ***
+With the interface of zero-argument commands defined for a hypothetical component, we now need to organize the code that actually implements these commands. 
+
+In the previous example, we introduced a sequence of components:
+
+```python
+components = (CameraA, CameraB, DAQ, EphysRec, VisualStim)
+```
+
+Each component is a noun: a thing which possesses functions such as `initialize()`, `start()`, `stop()`.
+
+In object-oriented programming, these nouns are implemented as *classes*, from which *objects* are created - which contain data and functions
+(*data* in the computing sense: numbers, text, filepaths, booleans... not necessarily the experimental data we're collecting, just information that the object can use to do its job).
+
+Here's a 
+
+
+
+
 - knowing whether a component has a particular command
 ### Multi-use devices -> multiple nouns
 Video camera plus snapshot camera, make two separate classes
