@@ -21,7 +21,7 @@ with specific code for each task, executed at specific points during an experime
 
 Although swapping out a device might only happen rarely, a high-degree of coupling makes it generally difficult to modify any part of the code without knock-on effects in other parts. Maintainance requires knowledge of the codebase in its entirety. As the experiment becomes more complex (in number of components and tasks), the code becomes more complicated, and we become reluctant to make any changes once it works. The weight of the existing code can completely discourage us from trying new experiments.
 
-<p><a href="https://commons.wikimedia.org/wiki/File:CouplingVsCohesion.svg#/media/File:CouplingVsCohesion.svg"><img src=https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/CouplingVsCohesion.svg/882px-CouplingVsCohesion.svg.png alt="CouplingVsCohesion.svg" height="360"></a><br>Fig. 1: a) The ideal organization separates modules of code according to their responsibilities, and joins them with a clean interface. b) High coupling between modules of code makes it harder to modify, extend, or fix bugs. It also becomes more difficult to understand. <i>Image credit: Евгений Мирошниченко, <a href="http://creativecommons.org/publicdomain/zero/1.0/deed.en" title="Creative Commons Zero, Public Domain Dedication">CC0</a>, <a href="https://commons.wikimedia.org/w/index.php?curid=104043458">Link</a></i></p>
+<p><a href="https://commons.wikimedia.org/wiki/File:CouplingVsCohesion.svg#/media/File:CouplingVsCohesion.svg"><img src=https://upload.wikimedia.org/wikipedia/commons/thumb/0/09/CouplingVsCohesion.svg/882px-CouplingVsCohesion.svg.png alt="CouplingVsCohesion.svg" height="360"></a><br>Fig. 1: a) The ideal organization separates modules of code according to their responsibility, and joins them with a clean interface. b) High coupling between modules of code makes it harder to modify, extend, or fix bugs. It also becomes more difficult to understand. <i>Image credit: Евгений Мирошниченко, <a href="http://creativecommons.org/publicdomain/zero/1.0/deed.en" title="Creative Commons Zero, Public Domain Dedication">CC0</a>, <a href="https://commons.wikimedia.org/w/index.php?curid=104043458">Link</a></i></p>
 
 We need to move from scenario b) to a) in Fig. 1, where the code for the component device on the right is isolated from the experiment logic on the left; if necessary the module on the right could be swapped out completely without modifying any code on the left. 
 
@@ -31,8 +31,15 @@ The implementation details of each component's tasks should be moved out of the 
 ## **Aims**
 The aim of this document is to provide practical advice and guidelines to help simplify the coordination of complex experiments. 
 
-We've tried to create a framework that's as minimalistic, flexible, and widely-applicable as possible. In our own experiments, it was straightforward to make all of the devices and services we use conform to this framework. It isn't a library of code that you need to learn and start using: more like a series of good practices that we've found to be helpful in keeping code manageable.
+We've tried to create a framework that's as minimalistic, flexible, and widely-applicable as possible. In our own experiments, it was straightforward to make all of the devices and services we use conform to this framework. 
 
+It isn't a library of code that you need to learn and start using: more like a series of good practices that we've found to be helpful in keeping code manageable.
+
+You may find it useful if:
+- you're planning systems neuroscience experiments, but don't have much experience coding
+- you have existing experiments that are becoming unwieldy
+- you need to maintain the internal Allen Institute `np_services` package
+ 
 Examples are written in Python using object-oriented programming paradigms, but the concepts will transfer to Matlab or other general-purpose languages.
 
 ## **Nomenclature**
