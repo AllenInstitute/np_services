@@ -125,12 +125,11 @@ def is_connected() -> bool:
 
 def initialize() -> None:
     logger.info("OpenEphys | Initializing")
-    launch()
-    
     global data_files
     data_files = []
     global initialized
     initialized = time.time()
+    global folder
     set_folder(folder)
 
 
@@ -146,8 +145,8 @@ def is_disk_space_ok() -> bool:
     for data_root in get_data_roots():
         try:
             free = utils.free_gb(data_root)
-        except FileNotFoundError as exc:
-            exc = exc
+        except FileNotFoundError as e:
+            exc = e
             logger.exception(f"{__name} data path not accessible: {data_root}")
         else:
             logger.info(
@@ -272,6 +271,7 @@ def unlock_previous_recording():
     time.sleep(0.5)
     stop()
     time.sleep(0.5)
+    global folder
     set_folder(folder)
 
 
@@ -318,7 +318,7 @@ def check_files_increasing_in_size() -> None:
             )
 
 def verify() -> None:
-    logger.info("OpenEphys | Verifying")
+    logger.debug("OpenEphys | Verifying")
     check_files_increasing_in_size()    
     logger.info(
         "OpenEphys | Verified files are increasing in size for all Record Nodes"
