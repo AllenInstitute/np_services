@@ -70,31 +70,6 @@ def start_rsc_apps() -> None:
             for app in apps_required_in_node:
                 rsc_node.p_start(app)
 
-
-@contextlib.contextmanager
-def debug_logging() -> Generator[None, None, None]:
-    
-    root_logger = logging.getLogger("root")
-    
-    logger_level_0 = root_logger.level
-    handler_level_0 = []
-    
-    root_logger.setLevel(logging.DEBUG)
-    for handler in (_ for _ in root_logger.handlers if isinstance(_, logging.StreamHandler)):
-        handler_level_0 += [handler.level]
-        handler.setLevel(logging.DEBUG)
-        
-    try:
-        yield
-    finally:
-        root_logger.setLevel(logger_level_0)
-        for handler, level in zip(
-            (_ for _ in root_logger.handlers if isinstance(_, logging.StreamHandler)),
-            handler_level_0,
-        ):
-            handler.setLevel(level)
-
-
 @contextlib.contextmanager
 def stop_on_error(*objs: protocols.Stoppable, reraise=True):
     for obj in objs:
@@ -111,19 +86,6 @@ def stop_on_error(*objs: protocols.Stoppable, reraise=True):
         if reraise:
             raise exc
         logger.error("Error suppressed: continuing despite raised exception", exc_info=exc)
-
-@contextlib.contextmanager
-def suppress(*exceptions: Type[BaseException]):
-    try:
-        yield
-    except exceptions or Exception as exc:
-        with contextlib.suppress(Exception):
-            logger.error(
-                "Error suppressed: continuing despite raised exception", exc_info=exc
-            )
-    finally:
-        return
-
 
 def is_online(host: str) -> bool:
     "Use OS's `ping` cmd to check if `host` is online."
@@ -187,9 +149,6 @@ def is_file_growing(path: str | bytes | os.PathLike) -> bool:
     return True
 
 
-PLATFORM_JSON_TIME_FMT = "%Y%m%d%H%M%S"
-
-@functools.singledispatch
 def normalize_time(t) -> str: 
     """
     >>> normalize_time(datetime.datetime(2023, 2, 14, 13, 30, 00))
@@ -205,22 +164,5 @@ def normalize_time(t) -> str:
     >>> normalize_time('2023-02-14T13:30:00')
     '20230214133000'
     """
-    return t
-    
-@normalize_time.register
-def _(t: datetime.datetime) -> str:
-    return t.strftime(PLATFORM_JSON_TIME_FMT)
-
-@normalize_time.register
-def _(t: float | int) -> str:
-    return datetime.datetime.fromtimestamp(t).strftime(PLATFORM_JSON_TIME_FMT)
-
-@normalize_time.register
-def _(t: str) -> str:
-    if len(t) == 14: # already in correct format
-        return datetime.datetime(int(t[:4]), *(int(t[a:a+2]) for a in range(4,14,2))).strftime(PLATFORM_JSON_TIME_FMT)
-    with contextlib.suppress(ValueError):
-        return datetime.datetime.fromtimestamp(float(t)).strftime(PLATFORM_JSON_TIME_FMT)
-    with contextlib.suppress(ValueError):
-        return datetime.datetime.fromisoformat(t).strftime(PLATFORM_JSON_TIME_FMT) 
-    raise ValueError(f"Unable to parse time: {t}")
+    # moved to np_config Feb 2023
+    return np_config.normalize_time(t)

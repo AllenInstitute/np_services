@@ -1253,7 +1253,7 @@ class YamlRecorder(JsonRecorder):
     def finalize(cls) -> None:
         logger.debug("Finalizing %s", __class__.__name__)
         log = json.load(cls.get_current_log().read_bytes())
-        with utils.suppress(
+        with contextlib.suppress(
             AttributeError, OSError
         ):  # if this fails we still have the json file
             yaml.dump(log, cls.get_current_log().with_suffix(".yaml").read_bytes())
