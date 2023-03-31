@@ -819,8 +819,8 @@ class Cam3d(CamstimSyncShared):
         logger.debug(f"{cls.__name__} | Finalizing")
         counter = 0
         while (
-            cls.is_started()
-            or not (latest := cls.get_latest_data('*'))
+            not (latest := cls.get_latest_data('*'))
+            or cls.is_started()
         ):
             time.sleep(1)
             counter += 1
