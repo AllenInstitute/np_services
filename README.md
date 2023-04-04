@@ -238,3 +238,42 @@ Video camera plus snapshot camera, make two separate classes
 - stop on failure
 - logging
 - timestamps
+
+
+# Protocols
+- >3.7?
+
+- we use the recent addition of protocols in Python 3.x to define objects with a certain set of methods - without the constraints of subclassing base classes.
+- we simply define a protocol as the methods a class should posess:
+- for example - we have two classes: `EphysRecorder` and `VideoRecorder`, which both have a `record` method
+- we define a `Recorder` protocol:
+
+```python
+from typing import Protocol, runtime_checkable
+
+@runtime_checkable
+class Recorder(Protocol):
+    def record(self):
+        ...
+```
+
+our experiment script can now ask whether any object meets the specification of a `Recorder` - if it does we can be confident it has certain properties, regardless of where it comes from or its parent classes. 
+
+
+
+- as our code evolves, we might want to redefine what it means to be a particular type of noun/class
+- we want to be able to use the same methods on both (e.g. `record`) but wish to add specific methods to either that don't apply to the other   
+- one solution to this would be to have a hierarchy of object classes: any instance of a class (a) which is a subclass of the superclass (A) is - according to python - an instance of that class. For example:
+```python
+>>> class A:
+>>>     pass
+>>> class a(A):
+>>>     pass
+>>> isinstance(a(), A)
+True
+```
+so if both `EphysRecorder` and `VideoRecorder` area subclass of some `Recorder`, 
+... so any method (function) that we define in class A would be callable in class a. And if we wanted to customize it for class a, we can re-define it ("overload" the method)
+
+
+
