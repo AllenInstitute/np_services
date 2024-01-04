@@ -1,9 +1,10 @@
 import os
 import pathlib
 import tempfile
+import time
 
-os.environ["USE_TEST_RIG"] = "0"
-os.environ["AIBS_RIG_ID"] = "NP.0"
+os.environ["USE_TEST_RIG"] = "1"
+os.environ["AIBS_RIG_ID"] = "NP.1"
 
 import np_logging
 
@@ -11,7 +12,19 @@ from np_services import *
 
 logger = np_logging.getLogger()
 
-with debug_logging():
+with np_logging.debug():
+    
+    
+    if False:
+        
+        Cam3d.label = 'pretest'
+        Cam3d.pretest()
+        
+    if False:
+        MouseDirector.user = 'ben.hardcastle'
+        MouseDirector.mouse = 366122
+        MouseDirector.pretest()
+
     if True:
         NewScaleCoordinateRecorder.log_root = pathlib.Path(tempfile.mkdtemp())
         NewScaleCoordinateRecorder.pretest()

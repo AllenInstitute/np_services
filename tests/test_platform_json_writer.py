@@ -5,25 +5,24 @@ import tempfile
 import time
 
 
-os.environ["USE_TEST_RIG"] = "0"
-os.environ["AIBS_RIG_ID"] = "NP.0"
+os.environ["USE_TEST_RIG"] = "1"
+os.environ["AIBS_RIG_ID"] = "NP.1"
 
 import np_logging
 logger = np_logging.getLogger()
 logger.setLevel(10)
 
 import pytest
-from np_services import PlatformJsonWriter
-from np_session import Session
+from np_session import Session, PlatformJson
 
 
 session = Session('1246096278_366122_20230209')
 @pytest.fixture
 def p(tmp_path):
-    return PlatformJsonWriter(path=tmp_path / session.folder)
+    return PlatformJson(path=tmp_path / session.folder)
 
 def test_filename(p):
-    assert p.path.name.endswith(PlatformJsonWriter.suffix)
+    assert p.path.name.endswith(PlatformJson.suffix)
     assert session.folder in p.path.name
 
 def test_path(p, tmp_path):
@@ -36,9 +35,8 @@ def test_initialization(p):
 def test_write_read_update(p):
     p.write()
     initial_time = p.workflow_start_time
-    # old = PlatformJsonWriter.parse_file(p.path)
+    # old = PlatformJson.parse_file(p.path)
     time.sleep(2)
-    new = PlatformJsonWriter(path=p.path)
     assert new.workflow_start_time > initial_time
     new.load_from_existing()
     assert new.workflow_start_time == initial_time
