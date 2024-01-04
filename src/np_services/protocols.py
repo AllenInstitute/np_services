@@ -51,14 +51,16 @@ class Startable(Protocol):
     "Supports `start()`, `latest_start`"
 
     def start(self) -> None:
+        "Starts stimulus/recording and records current time in `latest_start`."
         self.latest_start = time.time()
-
-    "Starts stimulus/recording and records current time in `latest_start`."
-    # def is_ready_to_start(self) -> bool: ...
-    # "The body of start() will not execute unless `is_ready_to_start()` returns `True`"
-    # def is_started(self) -> bool: ...
-    # "Prevents service from being re-started once started"
-    latest_start: int
+        
+    def is_ready_to_start(self) -> bool: 
+        "The body of start() will not execute unless `is_ready_to_start()` returns `True`"
+    
+    def is_started(self) -> bool:
+        "Prevents service from being re-started once started"
+    
+    latest_start: float
     "Store `time.time()` in each `start()` so we can find files created afterward."
 
 
