@@ -5,6 +5,7 @@ Proxy class names must match the name of the proxy key in the config dict.
 """
 import abc
 import contextlib
+import copy
 import csv
 import datetime
 import functools
@@ -275,7 +276,7 @@ class CamstimSyncShared(Proxy):
 
     @classmethod
     def start(cls) -> None:
-        logger.debug("Starting %s", cls.__name__)
+        logger.info("%s | Starting recording", cls.__name__)
         if cls.is_started():
             logger.warning(
                 "%s already started - should be stopped manually", cls.__name__
@@ -330,7 +331,7 @@ class CamstimSyncShared(Proxy):
 class Sync(CamstimSyncShared):
     host = np_config.Rig().Sync
     started_state = ("BUSY", "RECORDING")
-    raw_suffix: ClassVar[int | float] = ".sync"
+    raw_suffix: str = ".sync"
     rsc_app_id: str = "sync_device"
 
     @classmethod
@@ -541,8 +542,10 @@ class Camstim(CamstimSyncShared):
         logger.info("Finalizing %s", cls.__name__)
         if cls.is_started():
             cls.stop()
+        count = 0
         while not cls.is_ready_to_start():
-            logger.debug("Waiting for %s to finish processing", cls.__name__)
+            if count % 120 == 0:
+                logger.debug("Waiting for %s to finish processing", cls.__name__)
             time.sleep(1)  # TODO add backoff module
         if not cls.data_files:
             cls.data_files = []
@@ -620,10 +623,9 @@ class NoCamstim(Camstim):
     user: ClassVar[str] = "svc_neuropix"
     password: ClassVar[str]
 
-    # @classmethod
-    # def pretest(cls) -> None:
-    #     cls.remote_file =
-    #     super().pretest()
+    @classmethod
+    def pretest(cls) -> None:
+        logger.warning("%s | Pretest not implemented", cls.__name__)
 
     @classmethod
     def get_ssh(cls) -> fabric.Connection:
@@ -754,7 +756,7 @@ class Cam3d(CamstimSyncShared):
     serialization = "json"
     started_state = ["READY", "CAMERAS_OPEN,CAMERAS_ACQUIRING"]
     rsc_app_id = CONFIG['Cam3d']['rsc_app_id']
-    data_files: ClassVar[list[pathlib.Path]]
+    data_files: ClassVar[list[pathlib.Path]] = []
     
     @classmethod
     def is_started(cls) -> bool:
@@ -852,11 +854,12 @@ class Cam3d(CamstimSyncShared):
             logger.info(f"{cls.__name__} | Pretest passed")
             
 class MVR(CamstimSyncShared):
+    
     # req proxy config - hardcode or overload ensure_config()
     host: ClassVar[str] = np_config.Rig().Mon
-    port: ClassVar[int]
+    port: ClassVar[int] = CONFIG['MVR']['port']
 
-    re_aux: re.Pattern = re.compile("aux|USB!", re.IGNORECASE)
+    re_aux: re.Pattern = re.compile("aux|USB!|none", re.IGNORECASE)
 
     @classmethod
     def is_connected(cls) -> bool:
@@ -904,12 +907,12 @@ class MVR(CamstimSyncShared):
         del cls.proxy
 
     @classmethod
-    def get_proxy(cls) -> mvr.MVRConnector:
+    def get_proxy(cls) -> mvr_connector.MVRConnector:
         with contextlib.suppress(AttributeError):
             return cls.proxy
         cls.ensure_config()
         logger.debug("Creating %s proxy to %s:%s", cls.__name__, cls.host, cls.port)
-        cls.proxy = mvr.MVRConnector({"host": cls.host, "port": cls.port})
+        cls.proxy = mvr_connector.MVRConnector({"host": cls.host, "port": cls.port})
         cls.proxy._mvr_sock.settimeout(cls.timeout)
         return cls.get_proxy()
 
@@ -974,8 +977,10 @@ class MVR(CamstimSyncShared):
 
 
 class ImageMVR(MVR):
-    gb_per_hr: ClassVar[int | float]
-    min_rec_hr: ClassVar[int | float]
+    
+    gb_per_hr: ClassVar[int | float] = CONFIG['ImageMVR']["gb_per_hr"]
+    min_rec_hr: ClassVar[int | float] = CONFIG['ImageMVR']["min_rec_hr"]
+    
     label: ClassVar[str]
     "Rename file after capture to include label"
 
@@ -1049,9 +1054,10 @@ class ImageMVR(MVR):
 
 
 class VideoMVR(MVR):
-    pretest_duration_sec: ClassVar[int | float]
-    gb_per_hr: ClassVar[int | float]
-    min_rec_hr: ClassVar[int | float]
+    
+    pretest_duration_sec: ClassVar[int | float] = CONFIG['VideoMVR']["pretest_duration_sec"]
+    gb_per_hr: ClassVar[int | float] = CONFIG['VideoMVR']["gb_per_hr"]
+    min_rec_hr: ClassVar[int | float] = CONFIG['VideoMVR']["min_rec_hr"]
 
     raw_suffix: ClassVar[str] = ".mp4"
 
@@ -1061,12 +1067,14 @@ class VideoMVR(MVR):
     def get_cameras(cls) -> list[dict[str, str]]:
         "All available cams except Aux"
         cams = super().get_cameras()
+        # check for camera labels with known Aux cam names
         return [_ for _ in cams if cls.re_aux.search(_["label"]) is None]
 
     @classmethod
     def start(cls) -> None:
+        logger.info("%s | Starting recording", cls.__name__)
         cls.latest_start = time.time()
-        cls.get_proxy().start_record(record_time=365 * 60,)  # sec
+        cls.get_proxy().start_record(record_time=24 * 60 * 60,)  # sec
 
     @classmethod
     def verify(cls) -> None:
@@ -1176,6 +1184,8 @@ class JsonRecorder:
         log = (cls.log_root / cls.log_name).with_suffix(".json")
         log.parent.mkdir(parents=True, exist_ok=True)
         log.touch(exist_ok=True)
+        if log.read_text().strip() == "":
+            log.write_text("{}")
         cls.all_files = [log]
         cls.test()
 
@@ -1219,8 +1229,7 @@ class JsonRecorder:
             cls.all_files.append(file)
         else:
             file = cls.get_current_log()
-        for k, v in value.items():
-            data.setdefault(k, data.get(k, {}).update(v))
+        np_config.merge(data, value)
         file.write_text(json.dumps(data, indent=4, sort_keys=False, default=str))
         logger.debug("%s wrote to %s", cls.__name__, file)
 
@@ -1266,6 +1275,8 @@ class NewScaleCoordinateRecorder(JsonRecorder):
     data_root: ClassVar[pathlib.Path] = CONFIG['NewScaleCoordinateRecorder']['data']
     data_name: ClassVar[str] = CONFIG['NewScaleCoordinateRecorder']['data_name']
     data_fieldnames: ClassVar[Sequence[str]] = CONFIG['NewScaleCoordinateRecorder']['data_fieldnames']
+    data_files: ClassVar[list[pathlib.Path]] = [] 
+    "Files to be copied after exp"
     
     max_z_travel: ClassVar[int] = CONFIG['NewScaleCoordinateRecorder']['max_z_travel']
     num_probes: ClassVar[int] = 6
@@ -1293,6 +1304,7 @@ class NewScaleCoordinateRecorder(JsonRecorder):
         with cls.get_current_data().open("r") as _:
             reader = csv.DictReader(_, fieldnames=cls.data_fieldnames)
             rows = list(reader)
+        last_moved_label = cls.data_fieldnames[0]
         coords = {}
         for row in reversed(rows):  # search for the most recent coordinates
             if len(coords.keys()) == cls.num_probes:
@@ -1302,9 +1314,12 @@ class NewScaleCoordinateRecorder(JsonRecorder):
                 for k, v in row.items():
                     if "virtual" in k:
                         continue
-                    v = v.strip()
-                    with contextlib.suppress(ValueError):
-                        v = float(v)
+                    if k == last_moved_label:
+                        v = datetime.datetime.strptime(v, cls.log_time_fmt)
+                    else:
+                        v = v.strip()
+                        with contextlib.suppress(ValueError):
+                            v = float(v)
                     coords[m].update({k: v})
         return coords
 
@@ -1321,7 +1336,7 @@ class NewScaleCoordinateRecorder(JsonRecorder):
                 df.groupby(manipulator_label)[last_moved_label].idxmax()
             ].set_index(manipulator_label).sort_values(last_moved_label, ascending=False)
         for serial_number, row in last_moved.iloc[:cls.num_probes].iterrows(): 
-            new = {key: row[key] for key in cls.data_fieldnames if (key != manipulator_label)}
+            new = {key: row[key] for key in cls.data_fieldnames if (key != manipulator_label and 'virtual' not in key)}
             new[last_moved_label] = row[last_moved_label].to_pydatetime()
             coords[str(serial_number).strip()] = new
         return coords
@@ -1357,14 +1372,26 @@ class NewScaleCoordinateRecorder(JsonRecorder):
         coords = cls.get_coordinates()
         for k, v in coords.items():
             if isinstance(v, Mapping) and (last_moved := v.get('last_moved')):
+                del coords[k]['last_moved']
+                del coords[k]['serial_number']
+                continue
+                # if last_moved is kept, then normalize it depending on csv/pd method:
                 match last_moved:
                     case str():
                         timestamp = datetime.datetime.strptime(last_moved, cls.log_time_fmt)
                     case datetime.datetime():
                         timestamp = last_moved
                 coords[k]['last_moved'] = np_config.normalize_time(timestamp)
-        cls.write({'manipulator_coordinates': {np_config.normalize_time(cls.latest_start): coords}})
-        
+            
+        # rearrange so `label`` is top-level key, or use capture-timestamp if no label
+        platform_json = np_session.PlatformJson(cls.get_current_log())
+        platform_json_entry = copy.deepcopy(platform_json.manipulator_coordinates)
+        coords = {str(coords.pop('label', np_config.normalize_time(cls.latest_start))): coords}
+        logger.debug("%s | Adding to platform json: %s", cls.__name__, coords)
+        platform_json.manipulator_coordinates = np_config.merge(platform_json_entry, coords)
+        if (csv := cls.get_current_data()) not in cls.data_files:
+            cls.data_files.append(csv)
+            
     @classmethod
     def start(cls):
         cls.latest_start = time.time()
