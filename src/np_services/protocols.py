@@ -131,7 +131,7 @@ Service = Union[PreExperimentProtocols, PostExperimentProtocols]
 @typing.runtime_checkable
 class Gettable(Protocol):
     def get(self, property: str) -> Any:
-        return self.property
+        return getattr(self, property)
 
 
 @typing.runtime_checkable

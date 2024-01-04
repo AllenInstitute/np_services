@@ -15,7 +15,7 @@ import np_config
 import np_logging
 
 import np_services.protocols as protocols
-import np_services.zro as zro
+import np_services.resources.zro as zro
 
 logger = np_logging.getLogger(__name__)
 
