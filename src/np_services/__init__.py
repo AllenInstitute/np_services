@@ -1,4 +1,5 @@
 import np_services.open_ephys as OpenEphys
+from np_services.stim_computer_theme_changer import *
 from np_services.protocols import *
 try:
     from np_services.proxies import *
