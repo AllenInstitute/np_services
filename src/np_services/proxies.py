@@ -24,9 +24,9 @@ import pydantic
 import yaml
 import pandas as pd
 
-import np_services.mvr as mvr
+import np_services.resources.mvr_connector as mvr_connector
 import np_services.utils as utils
-import np_services.zro as zro
+import np_services.resources.zro as zro
 from np_services.protocols import *
 
 logger = np_logging.getLogger(__name__)
