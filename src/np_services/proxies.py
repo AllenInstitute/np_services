@@ -186,13 +186,13 @@ class Proxy(abc.ABC):
         if not glob:
             glob = f"*{cls.raw_suffix}" if hasattr(cls, "raw_suffix") else "*"
         if not hasattr(cls, "latest_start"):
+            data_paths = utils.get_files_created_between(
+                cls.data_root / subfolders, glob
+            )
+            if not data_paths:
+                return None
             return [
-                max(
-                    utils.get_files_created_between(
-                        cls.data_root / subfolders, glob
-                    ),
-                    key=lambda x: x.stat().st_mtime,
-                )
+                max(data_paths, key=lambda x: x.stat().st_mtime)
             ]
         return utils.get_files_created_between(
             cls.data_root / subfolders, glob, cls.latest_start
