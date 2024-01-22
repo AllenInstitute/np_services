@@ -1,67 +1,86 @@
-[tool.poetry]
+[project]
+authors = [
+    { name = "bjhardcastle", email = "ben.hardcastle@alleninstitute.org" },
+]
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "requests<3,>=2",
+    "np-session>=0.6.40",
+    "pyzmq",
+    "fabric<3.0,>=2.7",
+    "pandas>=2.0",
+    "h5py<4.0.0,>=3.8.0",
+    "np-config>=0.4.17",
+    "tables<4.0.0,>=3.8.0",
+]
 name = "np-services"
-version = "0.1.54"
+version = "0.1.58"
 description = "Tools for interfacing with devices and services used in Mindscope Neuropixels experiments at the Allen Institute."
-authors = ["bjhardcastle <ben.hardcastle@alleninstitute.org>"]
 readme = "README.md"
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
-packages = [{include = "np_services", from = "src"}]
-
-[tool.poetry.dependencies]
-python = "^3.11"
-requests = "^2"
-np_session = ">=0.4.13"
-backoff = "*"
-pyzmq = "*"
-fabric = "^2.7"
-pydantic = "^1.10"
-pandas = "^1.5.3"
-h5py = "^3.8.0"
-np_config = ">=0.4.17"
-tables = "^3.8.0"
-
-[tool.poetry.group.dev.dependencies]
-pip-tools = "*"
-isort = "*"
-mypy = "*"
-black = "*"
-pytest = "*"
-coverage = {extras = ["toml"], version = "^7.1.0"}
-pytest-cov = "^4.0.0"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = [
+    "pdm-backend",
+]
+build-backend = "pdm.backend"
 
 [tool.pytest.ini_options]
 addopts = [
     "--import-mode=importlib",
     "--doctest-modules",
-    # "--pdb",
-    # "--pdbcls=IPython.terminal.debugger:TerminalPdb",
 ]
-
 doctest_optionflags = [
     "NORMALIZE_WHITESPACE",
     "IGNORE_EXCEPTION_DETAIL",
     "ELLIPSIS",
 ]
-
 testpaths = [
-    "src/np_services/utils.py", # src has lots of functions called `test` that actually run tests on a rig
+    "src/np_services/utils.py",
     "tests/test_platform_json_writer.py",
 ]
 
-# [tool.coverage.paths]
-# source = ["src"]
+[tool.pdm]
+plugins = [
+    "pdm-bump>=0.7.3",
+]
 
-# [tool.coverage.run]
-# branch = true
-# source = ["np_services"]
+[tool.pdm.scripts]
+ruff = "ruff check src --fix-only"
+black = "black src"
+test = "pytest"
+bumpver = "pdm bump micro"
 
-# [tool.coverage.report]
-# show_missing = true
+[tool.pdm.scripts.prebuild]
+composite = [
+    "black",
+    "ruff",
+    "test",
+]
+
+[tool.pdm.scripts.build]
+composite = [
+    "pdm build",
+]
+
+[tool.pdm.scripts.dryrun]
+composite = [
+    "pdm build",
+    "pdm publish --no-build --repository https://test.pypi.org/simple",
+]
+
+[tool.pdm.scripts.publish]
+composite = [
+    "pdm build",
+    "pdm publish --no-build",
+]
+
+[tool.pdm.scripts.pub]
+composite = [
+    "bumpver",
+    "pdm publish",
+]

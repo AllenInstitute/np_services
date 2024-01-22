@@ -21,7 +21,6 @@ import fabric
 import np_config
 import np_logging
 import np_session
-import pydantic
 import yaml
 import pandas as pd
 
