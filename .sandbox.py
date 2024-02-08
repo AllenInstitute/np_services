@@ -3,8 +3,8 @@ import pathlib
 import tempfile
 import time
 
-os.environ["USE_TEST_RIG"] = "1"
-os.environ["AIBS_RIG_ID"] = "NP.1"
+os.environ["USE_TEST_RIG"] = "0"
+os.environ["AIBS_RIG_ID"] = "NP.3"
 
 import np_logging
 
@@ -25,7 +25,7 @@ with np_logging.debug():
         MouseDirector.mouse = 366122
         MouseDirector.pretest()
 
-    if True:
+    if False:
         NewScaleCoordinateRecorder.log_root = pathlib.Path(tempfile.mkdtemp())
         NewScaleCoordinateRecorder.pretest()
 
@@ -37,7 +37,7 @@ with np_logging.debug():
         with stop_on_error(VideoMVR, reraise=False):
             VideoMVR.pretest()
 
-    if False:
+    if True:
         OpenEphys.folder = "test"
         with stop_on_error(OpenEphys, reraise=False):
             OpenEphys.pretest()

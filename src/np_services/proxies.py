@@ -21,6 +21,9 @@ import fabric
 import np_config
 import np_logging
 import np_session
+import npc_sync
+import npc_mvr
+import np_tools
 import yaml
 import pandas as pd
 
@@ -452,9 +455,7 @@ class Sync(CamstimSyncShared):
         
     @classmethod
     def full_validation(cls, data: pathlib.Path) -> None:
-        line_labels: dict = cls.get_config()["line_labels"]
-        # TODO
-        pass
+        npc_sync.get_sync_data(data).validate()
 
     @classmethod
     def min_validation(cls, data: pathlib.Path) -> None:
@@ -1061,7 +1062,8 @@ class VideoMVR(MVR):
     raw_suffix: ClassVar[str] = ".mp4"
 
     started_state = ("BUSY", "RECORDING")
-
+    sync_path: Optional[pathlib.Path] = None
+    
     @classmethod
     def get_cameras(cls) -> list[dict[str, str]]:
         "All available cams except Aux"
@@ -1137,9 +1139,14 @@ class VideoMVR(MVR):
 
     @classmethod
     def validate(cls) -> None:
-        logger.warning("%s.validate() not implemented", cls.__name__)
-
-
+        tempdir = pathlib.Path(tempfile.gettempdir())
+        for file in cls.get_latest_data("*.mp4"):
+            np_tools.symlink(file, tempdir / file.name)
+        npc_mvr.MVRDataset(
+            tempdir, 
+            getattr(cls, "sync_path", None),
+        )
+        
 class JsonRecorder:
     "Just needs a `start` method that calls `write()`."
 
