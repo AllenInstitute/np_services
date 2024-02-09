@@ -11,9 +11,6 @@ from typing import Iterable, Literal
 import upath
 
 
-os.environ["USE_TEST_RIG"] = "0"
-os.environ["AIBS_RIG_ID"] = "NP.3"
-
 import np_session
 import np_services
 import np_config
