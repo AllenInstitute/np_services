@@ -11,6 +11,7 @@ from typing import Any, Optional, Sequence
 import np_config
 import np_logging
 import requests
+import npc_ephys
 
 import np_services.utils as utils
 from np_services.protocols import TestError
@@ -46,6 +47,10 @@ folder: str  #! required
 data_files: list[pathlib.Path] = []
 "Storage for paths collected over the experiment."
 data_root: Optional[pathlib.Path] = None
+
+# for validation
+sync_path: Optional[pathlib.Path] = None
+
 # -------------------------------------------------------------------------------------- #
 
 
@@ -127,6 +132,7 @@ def initialize() -> None:
     logger.info("OpenEphys | Initializing")
     global data_files
     data_files = []
+    sync_path = None
     global initialized
     initialized = time.time()
     global folder
@@ -165,7 +171,7 @@ def test() -> None:
     logger.info("OpenEphys | Testing")
     if not is_connected():
         if exc:
-            raise exc
+            raise TestError(f"Acq computer {host} isn't responding, or OpenEphys isn't open") from exc
     gb = get_required_disk_gb()
     if not is_disk_space_ok():
         raise TestError(
@@ -326,8 +332,13 @@ def verify() -> None:
 
 
 def validate() -> None:
-    logger.warning("OpenEphys | validate() not implemented")
-
+    logger.info(f"OpenEphys | Validating")
+    npc_ephys.validate_ephys(
+        root_paths=data_files,
+        sync_path_or_dataset=sync_path,
+        ignore_small_folders=True,
+    )
+    logger.info(f"OpenEphys | Validated data {'with' if sync_path else 'without'} sync")
 
 def set_ref(ext_tip="TIP"):
     # for port in [0, 1, 2]:

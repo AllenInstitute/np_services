@@ -9,6 +9,7 @@ import copy
 import csv
 import datetime
 import functools
+import itertools
 import json  # loading config from Sync proxy will instantiate datetime objects
 import logging
 import pathlib
@@ -21,6 +22,10 @@ import fabric
 import np_config
 import np_logging
 import np_session
+import npc_stim
+import npc_sync
+import npc_mvr
+import np_tools
 import yaml
 import pandas as pd
 
@@ -58,7 +63,7 @@ class Proxy(abc.ABC):
     # info
     exc: ClassVar[Optional[Exception]] = None
 
-    latest_start: ClassVar[float | int]
+    latest_start: ClassVar[float | int] = 0
     "`time.time()` when the service was last started via `start()`."
 
     @classmethod
@@ -135,6 +140,7 @@ class Proxy(abc.ABC):
                 return
         if cls.data_root:
             cls.data_files = []
+        cls.sync_path = None
         cls.initialization = time.time()
         logger.info("%s(%s) initialized: ready for use", __class__.__name__, cls.__name__)
 
@@ -452,9 +458,7 @@ class Sync(CamstimSyncShared):
         
     @classmethod
     def full_validation(cls, data: pathlib.Path) -> None:
-        line_labels: dict = cls.get_config()["line_labels"]
-        # TODO
-        pass
+        npc_sync.get_sync_data(data).validate()
 
     @classmethod
     def min_validation(cls, data: pathlib.Path) -> None:
@@ -476,6 +480,7 @@ class Camstim(CamstimSyncShared):
     host = np_config.Rig().Stim
     started_state = ("BUSY", "Script in progress.")
     rsc_app_id = "camstim_agent"
+    sync_path: Optional[pathlib.Path] = None
 
     @classmethod
     def launch(cls) -> None:
@@ -517,7 +522,7 @@ class Camstim(CamstimSyncShared):
             cls.min_rec_hr = config.get("min_rec_hr", 3.0)
 
         # for resulting data (optional):
-        if not cls.data_root or cls.host not in cls.data_root.parts:
+        if not cls.data_root:
             relative_path = config.get("data", None)
             if relative_path:
                 root = pathlib.Path(f"//{cls.host}/{relative_path}")
@@ -548,9 +553,18 @@ class Camstim(CamstimSyncShared):
             time.sleep(1)  # TODO add backoff module
         if not cls.data_files:
             cls.data_files = []
-        cls.data_files.extend(new := cls.get_latest_data("*.pkl"))
+        cls.data_files.extend(new := itertools.chain(cls.get_latest_data("*pkl"), cls.get_latest_data("*hdf5")))
         logger.info("%s added new data: %s", cls.__name__, [_.name for _ in new])
 
+    @classmethod
+    def validate(cls) -> None:
+        if not cls.sync_path:
+            logger.warning("Cannot validate stim without sync file: assign `stim.sync_path`")
+            return
+        logger.info("Validating %s", cls.__name__)  
+        for file in cls.data_files:
+            npc_stim.validate_stim(file, sync=cls.sync_path)
+        logger.info(f"Validated {len(cls.data_files)} stim files with sync")
 
 class ScriptCamstim(Camstim):
     script: ClassVar[str]
@@ -1061,7 +1075,8 @@ class VideoMVR(MVR):
     raw_suffix: ClassVar[str] = ".mp4"
 
     started_state = ("BUSY", "RECORDING")
-
+    sync_path: Optional[pathlib.Path] = None
+    
     @classmethod
     def get_cameras(cls) -> list[dict[str, str]]:
         "All available cams except Aux"
@@ -1137,9 +1152,19 @@ class VideoMVR(MVR):
 
     @classmethod
     def validate(cls) -> None:
-        logger.warning("%s.validate() not implemented", cls.__name__)
-
-
+        tempdir = pathlib.Path(tempfile.gettempdir())
+        tempfiles: list[pathlib.Path] = []
+        # currently can't pass individual files to mvrdataset - just a dir
+        for file in itertools.chain(cls.get_latest_data("*.mp4"), cls.get_latest_data("*.json")):
+            np_tools.copy(file, t := tempdir / file.name)
+            tempfiles.append(t)
+        npc_mvr.MVRDataset(
+            tempdir, 
+            getattr(cls, "sync_path", None),
+        )
+        logger.info(f"Validated {len(tempfiles)} video/info files {'with' if getattr(cls, 'sync_path', None) else 'without'} sync")
+        for file in tempfiles:
+            file.unlink(missing_ok=True)
 class JsonRecorder:
     "Just needs a `start` method that calls `write()`."
 

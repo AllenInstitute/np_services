@@ -12,6 +12,10 @@ dependencies = [
     "h5py<4.0.0,>=3.8.0",
     "np-config>=0.4.17",
     "tables<4.0.0,>=3.8.0",
+    "npc-sync>=0.1.6",
+    "npc-ephys>=0.1.7",
+    "npc-stim>=0.1.4",
+    "npc-mvr>=0.1.2",
 ]
 name = "np-services"
 version = "0.1.58"
@@ -22,6 +26,9 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
 ]
+
+[project.scripts]
+pretest = "np_services.scripts.pretest:main"
 
 [build-system]
 requires = [
