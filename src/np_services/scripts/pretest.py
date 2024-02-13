@@ -3,6 +3,7 @@ import contextlib
 import functools
 import os
 import pathlib
+import sys
 import tempfile
 import time
 import logging
@@ -308,6 +309,12 @@ def parse_args() -> dict:
     return vars(parser.parse_args())
 
 def main() -> None:
+    logging.basicConfig(
+        level="INFO",
+        format="%(name)s | %(levelname)s | %(message)s",
+        datefmt="%H:%M:%S",
+        stream=sys.stdout,
+    )
     run_pretest(
         **parse_args()
     )
