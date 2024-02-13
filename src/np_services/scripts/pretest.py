@@ -259,7 +259,7 @@ def configure_services(services: Iterable[np_services.Testable]) -> None:
 def get_temp_dir() -> pathlib.Path:
     return pathlib.Path(tempfile.mkdtemp())
 
-def main(
+def run_pretest(
     recorders: Iterable[np_services.Testable] = DEFAULT_RECORDERS,
     stim: np_services.Startable = DEFAULT_STIM,
     other: Iterable[np_services.Testable] = DEFAULT_SERVICES,
@@ -307,7 +307,10 @@ def parse_args() -> dict:
     parser.add_argument("--check_audio", action="store_true", help="Check audio-running line on sync", default=False)
     return vars(parser.parse_args())
 
-if __name__ == '__main__':
-    main(
+def main() -> None:
+    run_pretest(
         **parse_args()
     )
+
+if __name__ == '__main__':
+    main()
