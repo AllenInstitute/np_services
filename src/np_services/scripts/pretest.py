@@ -267,6 +267,7 @@ def run_pretest(
     check_licks: bool = False,
     check_opto: bool = False,
     check_audio: bool = False,
+    check_running: bool = False,
     ) -> None:
     print("Starting pretest")
     configure_services((*recorders, stim, *other))
@@ -300,12 +301,17 @@ def run_pretest(
         npc_sync.SyncDataset(np_services.Sync.data_files[0]).validate(
             licks=check_licks, opto=check_opto, audio=check_audio,
         )
+    if check_running:
+        speed, timestamps  = npc_stim.get_running_speed_from_stim_files(*stim.data_files, np_services.Sync.data_files[0])
+        if not speed.size or not timestamps.size:
+            raise AssertionError("No running data found")
 
 def parse_args() -> dict:
     parser = argparse.ArgumentParser(description="Run pretest")
     parser.add_argument("--check_licks", action="store_true", help="Check lick sensor line on sync", default=False)
     parser.add_argument("--check_opto", action="store_true", help="Check opto-running line on sync", default=False)
     parser.add_argument("--check_audio", action="store_true", help="Check audio-running line on sync", default=False)
+    parser.add_argument("--check_running", action="store_true", help="Check running-wheel encoder data in stim files", default=False)
     return vars(parser.parse_args())
 
 def main() -> None:
