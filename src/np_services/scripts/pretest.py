@@ -302,7 +302,7 @@ def run_pretest(
             licks=check_licks, opto=check_opto, audio=check_audio,
         )
     if check_running:
-        speed, timestamps  = npc_stim.get_running_speed_from_stim_files(*stim.data_files, np_services.Sync.data_files[0])
+        speed, timestamps  = npc_stim.get_running_speed_from_stim_files(*stim.data_files, sync=np_services.Sync.data_files[0])
         if not speed.size or not timestamps.size:
             raise AssertionError("No running data found")
 
