@@ -28,7 +28,7 @@ import npc_stim
 logger = logging.getLogger()
 
 DEFAULT_SERVICES: tuple[np_services.Testable, ...] = (np_services.MouseDirector, )
-DEFAULT_RECORDERS: tuple[np_services.Startable, ...] = (np_services.Sync, np_services.OpenEphys, np_services.VideoMVR, )
+DEFAULT_RECORDERS: tuple[np_services.Startable, ...] = (np_services.Sync, np_services.VideoMVR, )
 
 @dataclasses.dataclass
 class PretestConfig:
@@ -49,7 +49,9 @@ class PretestSession(abc.ABC):
         return DEFAULT_SERVICES + self.recorders + (self.stim, )
     
     @property
-    def recorders(self) -> tuple[np_services.Startable, ...]: 
+    def recorders(self) -> tuple[np_services.Startable, ...]:
+        if self.pretest_config.check_barcodes:
+            return DEFAULT_RECORDERS + (np_services.OpenEphys, )
         return DEFAULT_RECORDERS
     
     @property
