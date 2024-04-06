@@ -314,7 +314,7 @@ def run_pretest(
     ) -> None:
     print("Starting pretest")
     session: PretestSession
-    if np_config.Rig.idx == 0:
+    if np_config.Rig().idx == 0:
         session = LegacyNP0Pretest(config)
     else:
         session = DynamicRoutingPretest(config)
