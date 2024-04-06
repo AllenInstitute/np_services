@@ -1,13 +1,18 @@
+from __future__ import annotations
+
+import abc
 import argparse
 import contextlib
+import dataclasses
 import functools
+import json
 import os
 import pathlib
 import sys
 import tempfile
 import time
 import logging
-from typing import Iterable, Literal
+from typing import Iterable, Literal, Type
 
 import upath
 
@@ -22,27 +27,60 @@ import npc_stim
 
 logger = logging.getLogger()
 
-DEFAULT_SERVICES = (np_services.MouseDirector, )
-DEFAULT_STIM = np_services.ScriptCamstim
-DEFAULT_RECORDERS = (np_services.Sync, np_services.OpenEphys, np_services.VideoMVR, )
+DEFAULT_SERVICES: tuple[np_services.Testable, ...] = (np_services.MouseDirector, )
+DEFAULT_RECORDERS: tuple[np_services.Startable, ...] = (np_services.Sync, np_services.OpenEphys, np_services.VideoMVR, )
 
-class DynamicRoutingPretest:
-    """Modified version of class in np_workflows."""
-    use_github: bool = True
+@dataclasses.dataclass
+class PretestConfig:
+    check_barcodes: bool = False
+    check_licks: bool = False
+    check_opto: bool = False
+    check_audio: bool = False
+    check_running: bool = False
+
+
+class PretestSession(abc.ABC):
+
+    def __init__(self, pretest_config: PretestConfig) -> None:
+        self.pretest_config = pretest_config
     
+    @property
+    def services(self) -> tuple[np_services.Testable | np_services.Startable, ...]: 
+        return DEFAULT_SERVICES + self.recorders + (self.stim, )
+    
+    @property
+    def recorders(self) -> tuple[np_services.Startable, ...]: 
+        return DEFAULT_RECORDERS
+    
+    @property
+    @abc.abstractmethod     
+    def stim(self) -> Type[np_services.Camstim]: ...
+
+    @abc.abstractmethod     
+    def configure_services(self) -> None: ...
+    
+    @abc.abstractmethod
+    def run_pretest_stim(self) -> None: ...
+    
+class DynamicRoutingPretest(PretestSession):
+    """Modified version of class in np_workflows."""
+    
+    use_github: bool = True
+    task_name: str = "" # unused in pretest
+    
+    @property
+    def stim(self) -> Type[np_services.ScriptCamstim]:
+        return np_services.ScriptCamstim
+        
     @property
     def rig(self) -> np_config.Rig:
         return np_config.Rig()
-
-    @property
-    def config(self) -> dict:
-        return self.rig.config
     
     @property
     def commit_hash(self) -> str:
         if hasattr(self, '_commit_hash'):
             return self._commit_hash
-        self._commit_hash = self.config['dynamicrouting_task_script']['commit_hash']
+        self._commit_hash = self.rig.config['dynamicrouting_task_script']['commit_hash']
         return self.commit_hash
     
     @commit_hash.setter
@@ -53,7 +91,7 @@ class DynamicRoutingPretest:
     def github_url(self) -> str:
         if hasattr(self, '_github_url'):
             return self._github_url
-        self._github_url = self.config['dynamicrouting_task_script']['url']
+        self._github_url = self.rig.config['dynamicrouting_task_script']['url']
         return self.github_url
     
     @github_url.setter
@@ -67,21 +105,6 @@ class DynamicRoutingPretest:
     @property
     def base_path(self) -> pathlib.Path:
         return pathlib.Path('//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/')
-
-    @property
-    def task_name(self) -> str:
-        """For sending to runTask.py and controlling implementation details of the task."""
-        if hasattr(self, '_task_name'): 
-            return self._task_name 
-        return ""
-
-    @task_name.setter
-    def task_name(self, task_name: str) -> None:
-        self._task_name = task_name
-        if task_name not in self.preset_task_names:
-            print(f"{task_name = !r} doesn't correspond to a preset value, but the attribute is updated anyway!")
-        else:
-            print(f"Updated {self.__class__.__name__}.{task_name = !r}")
 
     @property
     def mouse(self) -> np_session.Mouse:
@@ -215,23 +238,49 @@ class DynamicRoutingPretest:
                 }
             params['task_script_commit_hash'] = self.commit_hash
 
-            np_services.ScriptCamstim.script = self.camstim_script.read_text()
+            self.stim.script = self.camstim_script.read_text()
         else:
-            np_services.ScriptCamstim.script = self.camstim_script.as_posix()
+            self.stim.script = self.camstim_script.as_posix()
         
-        np_services.ScriptCamstim.params = params
+        self.stim.params = params
         
 
-        np_services.ScriptCamstim.start()
+        self.stim.start()
         with contextlib.suppress(np_services.resources.zro.ZroError):
-            while not np_services.ScriptCamstim.is_ready_to_start():
+            while not self.stim.is_ready_to_start():
                 time.sleep(1)
 
 
         with contextlib.suppress(np_services.resources.zro.ZroError):
-            np_services.ScriptCamstim.finalize()
-     
-def configure_services(services: Iterable[np_services.Testable]) -> None:
+            self.stim.finalize()
+            
+    def run_pretest_stim(self) -> None:
+        self.run_script('sound_test')
+        if self.pretest_config.check_opto:
+            self.run_script('optotagging')
+            
+    def configure_services(self) -> None:
+        self.stim.script = '//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/runTask.py'
+        self.stim.data_root = pathlib.Path('//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/Data/366122')
+
+                
+class LegacyNP0Pretest(PretestSession):
+    def __init__(self, pretest_config: PretestConfig) -> None:
+        self.pretest_config = pretest_config
+        
+    @property
+    def stim(self) -> Type[np_services.SessionCamstim]:
+        return np_services.SessionCamstim
+    
+    def run_pretest_stim(self) -> None:
+        self.stim.start()
+                                
+    def configure_services(self) -> None:
+        self.stim.lims_user_id = "ben.hardcastle"
+        self.stim.labtracks_mouse_id = 598796
+        self.stim.override_params = json.loads(pathlib.Path("//allen/programs/mindscope/workgroups/dynamicrouting/ben/np0_pretest/params.json").read_bytes())
+
+def configure_services(session: PretestSession) -> None:
     """For each service, apply every key in self.config['service'] as an attribute."""
 
     def apply_config(service) -> None:
@@ -242,18 +291,18 @@ def configure_services(services: Iterable[np_services.Testable]) -> None:
                     f"{service.__name__} | Configuring {service.__name__}.{key} = {getattr(service, key)}"
                 )
 
-    for service in services:
+    for service in session.services:
         for base in service.__class__.__bases__:
             apply_config(base)
         apply_config(service)
-        
-    np_services.ScriptCamstim.script = '//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/runTask.py'
-    np_services.ScriptCamstim.data_root = pathlib.Path('//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/Data/366122')
-
+    
     np_services.MouseDirector.user = 'ben.hardcastle'
     np_services.MouseDirector.mouse = 366122
+    
+    session.configure_services()
 
-    np_services.OpenEphys.folder = '_test_'
+    if session.pretest_config.check_barcodes:
+        np_services.OpenEphys.folder = '_test_'
 
 
 @functools.cache
@@ -261,58 +310,63 @@ def get_temp_dir() -> pathlib.Path:
     return pathlib.Path(tempfile.mkdtemp())
 
 def run_pretest(
-    recorders: Iterable[np_services.Testable] = DEFAULT_RECORDERS,
-    stim: np_services.Startable = DEFAULT_STIM,
-    other: Iterable[np_services.Testable] = DEFAULT_SERVICES,
-    check_licks: bool = False,
-    check_opto: bool = False,
-    check_audio: bool = False,
-    check_running: bool = False,
+    config: PretestConfig = PretestConfig(),
     ) -> None:
     print("Starting pretest")
-    configure_services((*recorders, stim, *other))
-    for service in (*recorders, stim, *other):
+    session: PretestSession
+    if np_config.Rig.idx == 0:
+        session = LegacyNP0Pretest(config)
+    else:
+        session = DynamicRoutingPretest(config)
+    configure_services(session)
+    
+    for service in session.services:
         if isinstance(service, np_services.Initializable):
             service.initialize()
             
-    stoppables = tuple(_ for _ in recorders if isinstance(_, np_services.Stoppable))
+    stoppables = tuple(_ for _ in session.recorders if isinstance(_, np_services.Stoppable))
     with np_services.stop_on_error(*stoppables):
         for service in stoppables:
             if isinstance(service, np_services.Startable):
                 service.start()
         t0 = time.time()
-        DynamicRoutingPretest().run_script('optotagging')
+        session.run_pretest_stim()
         t1 = time.time()
-        time.sleep(max(0, 70 - (t1 - t0))) # long enough to capture 2 sets of barcodes on sync/openephys (cannot scale time with 1 set)
+        min_wait_time = 70 if config.check_barcodes else 0 # long enough to capture 2 sets of barcodes on sync/openephys (cannot scale time with 1 set)
+        time.sleep(max(0, min_wait_time - (t1 - t0))) 
         for service in reversed(stoppables):
             if isinstance(service, np_services.Stoppable):
                 service.stop()
 
-    for service in (*recorders, stim, *other):
+    for service in session.services:
         if isinstance(service, np_services.Finalizable):
             service.finalize()
 
-    np_services.VideoMVR.sync_path = np_services.OpenEphys.sync_path = stim.sync_path = np_services.Sync.data_files[0]
+    np_services.VideoMVR.sync_path = np_services.OpenEphys.sync_path = session.stim.sync_path = np_services.Sync.data_files[0]
     
-    for service in (*recorders, stim, *other):
+    for service in session.services:
         if isinstance(service, np_services.Validatable):
             service.validate()
-    if any((check_licks, check_opto, check_audio)):
+    assert np_services.Sync.data_files is not None, "No sync file found"
+    assert session.stim.data_files is not None, "No stim file found"
+    
+    if any((config.check_licks, config.check_opto, config.check_audio)):
         npc_sync.SyncDataset(np_services.Sync.data_files[0]).validate(
-            licks=check_licks, opto=check_opto, audio=check_audio,
+            licks=config.check_licks, opto=config.check_opto, audio=config.check_audio,
         )
-    if check_running:
-        speed, timestamps  = npc_stim.get_running_speed_from_stim_files(*stim.data_files, sync=np_services.Sync.data_files[0])
+    if config.check_running:
+        speed, timestamps  = npc_stim.get_running_speed_from_stim_files(*session.stim.data_files, sync=np_services.Sync.data_files[0])
         if not speed.size or not timestamps.size:
             raise AssertionError("No running data found")
 
-def parse_args() -> dict:
+def parse_args() -> PretestConfig:
     parser = argparse.ArgumentParser(description="Run pretest")
+    parser.add_argument("--check_barcodes", action="store_true", help="Check barcodes from Arduino are being received on sync and open ephys", default=False)
     parser.add_argument("--check_licks", action="store_true", help="Check lick sensor line on sync", default=False)
     parser.add_argument("--check_opto", action="store_true", help="Check opto-running line on sync", default=False)
     parser.add_argument("--check_audio", action="store_true", help="Check audio-running line on sync", default=False)
     parser.add_argument("--check_running", action="store_true", help="Check running-wheel encoder data in stim files", default=False)
-    return vars(parser.parse_args())
+    return PretestConfig(**vars(parser.parse_args()))
 
 def main() -> None:
     logging.basicConfig(
@@ -321,9 +375,7 @@ def main() -> None:
         datefmt="%H:%M:%S",
         stream=sys.stdout,
     )
-    run_pretest(
-        **parse_args()
-    )
+    run_pretest(parse_args())
 
 if __name__ == '__main__':
     main()
