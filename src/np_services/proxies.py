@@ -261,7 +261,7 @@ class Proxy(abc.ABC):
 
 class CamstimSyncShared(Proxy):
     started_state: ClassVar[Sequence[str]]
-
+    
     @classmethod
     def is_ready_to_start(cls) -> bool:
         if cls.is_started():
@@ -606,13 +606,14 @@ class ScriptCamstim(Camstim):
 class SessionCamstim(Camstim):
     lims_user_id: ClassVar[str]
     labtracks_mouse_id: ClassVar[int]
-
+    override_params: ClassVar[dict[str, Any] | None] = None
+    
     @classmethod
     def start(cls):
         cls.latest_start = time.time()
         cls.get_proxy().start_session(
-            cls.labtracks_mouse_id, cls.lims_user_id
-        )  # , cls.params)
+            cls.labtracks_mouse_id, cls.lims_user_id, override_params=cls.override_params
+        )
 
     @classmethod
     def pretest(cls) -> None:
