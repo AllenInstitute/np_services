@@ -158,9 +158,11 @@ class DynamicRoutingPretest(PretestSession):
         
         rig = str(self.rig).replace('.', '')
         locs_root = self.base_path / 'OptoGui' / f'{dirname}'
-        available_locs = sorted(tuple(locs_root.glob(f"{file_prefix}_{self.mouse.id}_{rig}_*")), reverse=True)
+        # use any available locs file - as long as the light switches on the
+        # values don't matter
+        available_locs = sorted(tuple(locs_root.glob(f"{file_prefix}*")), reverse=True)
         if not available_locs:
-            raise FileNotFoundError(f"No optotagging locs found for {self.mouse}/{rig} - have you run OptoGui?")
+            raise FileNotFoundError(f"No optotagging locs found - have you run OptoGui?")
         return available_locs[0]
         
         
@@ -257,10 +259,14 @@ class DynamicRoutingPretest(PretestSession):
             self.stim.finalize()
             
     def run_pretest_stim(self) -> None:
-        self.run_script('sound_test')
-        if self.pretest_config.check_opto:
-            self.run_script('optotagging')
-            
+        if self.pretest_config.check_audio:
+            print("Starting audio test - check for sound...", end="", flush=True)
+            self.run_script('sound_test')
+            print(" done")
+        print("Starting stim - check for opto, spin wheel and tap lick spout...", end="", flush=True)
+        self.run_script('optotagging') # vis stim with opto (for checking vsyncs, running,  )
+        print(" done")
+        
     def configure_services(self) -> None:
         self.stim.script = '//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/runTask.py'
         self.stim.data_root = pathlib.Path('//allen/programs/mindscope/workgroups/dynamicrouting/DynamicRoutingTask/Data/366122')
