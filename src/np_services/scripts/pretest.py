@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import abc
 import argparse
+import copy
 import contextlib
 import dataclasses
 import functools
@@ -222,14 +223,14 @@ class DynamicRoutingPretest(PretestSession):
     
     def run_script(self, stim: Literal['sound_test', 'mapping', 'task', 'opto', 'optotagging', 'spontaneous', 'spontaneous_rewards']) -> None:
         
-        params = getattr(self, f'{stim.replace(" ", "_")}_params')
+        params = copy.deepcopy(getattr(self, f'{stim.replace(" ", "_")}_params'))
         
         # add mouse and user info for MPE
         params['mouse_id'] = str(self.mouse.id)
         params['user_id'] = 'ben.hardcastle'
         
-        script: str = params['taskScript']
-        params['taskScript'] = (self.task_script_base / script).as_posix()
+        if self.task_script_base not in params['taskScript']:
+            params['taskScript'] = (self.task_script_base / params['taskScript']).as_posix()
         
         params['maxTrials'] = 30
         
