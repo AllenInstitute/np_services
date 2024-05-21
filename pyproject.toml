@@ -18,7 +18,7 @@ dependencies = [
     "npc-mvr>=0.1.2",
 ]
 name = "np-services"
-version = "0.1.67"
+version = "0.1.68"
 description = "Tools for interfacing with devices and services used in Mindscope Neuropixels experiments at the Allen Institute."
 readme = "README.md"
 classifiers = [
