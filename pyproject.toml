@@ -29,65 +29,52 @@ classifiers = [
 
 [project.scripts]
 pretest = "np_services.scripts.pretest:main"
+task = "poethepoet:main"
 
 [build-system]
-requires = [
-    "pdm-backend",
-]
-build-backend = "pdm.backend"
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
 
-[tool.pytest.ini_options]
-addopts = [
-    "--import-mode=importlib",
-    "--doctest-modules",
-]
-doctest_optionflags = [
-    "NORMALIZE_WHITESPACE",
-    "IGNORE_EXCEPTION_DETAIL",
-    "ELLIPSIS",
-]
-testpaths = [
-    "src/np_services/utils.py",
-    "tests/test_platform_json_writer.py",
+[dependency-groups]
+task_runner = ["poethepoet>=0.33.1"]
+linting = ["black>=25.1.0", "isort>=6.0.1", "ruff>=0.11.2"]
+testing = ["mypy>=1.4.1"]
+bump = [
+    "bump-my-version>=1.1.1",
+    "git-changelog>=2.5.3",
 ]
 
-[tool.pdm]
-plugins = [
-    "pdm-bump>=0.7.3",
+[tool.bumpversion]
+tag = true
+allow_dirty = true
+commit = true
+commit_args = "-a"
+message = "Bump version: {current_version} → {new_version} [skip actions]"
+pre_commit_hooks = [
+    "uv lock --upgrade-package np_workflows",
+    "git-changelog -o CHANGELOG.md",
+    "uv build",
+    "uv publish",
+]
+post_commit_hooks = [
+    "git push origin main",
+    "git push --tags",
 ]
 
-[tool.pdm.scripts]
+[tool.poe.tasks]
+mypy = "mypy src --install-types --non-interactive"
+test = ["mypy"]
 ruff = "ruff check src --fix-only"
 black = "black src"
-test = "pytest"
-bumpver = "pdm bump micro"
+format = ["ruff", "black"]
+bump_pub_tag = "bump-my-version bump patch"
+release = ["bump_pub_tag"]
 
-[tool.pdm.scripts.prebuild]
-composite = [
-    "black",
-    "ruff",
-    "test",
-]
+[tool.setuptools.packages.find]
+where = ["src"]
 
-[tool.pdm.scripts.build]
-composite = [
-    "pdm build",
-]
+[tool.setuptools.package-data]
+np_workflows = ["py.typed"]
 
-[tool.pdm.scripts.dryrun]
-composite = [
-    "pdm build",
-    "pdm publish --no-build --repository https://test.pypi.org/simple",
-]
-
-[tool.pdm.scripts.publish]
-composite = [
-    "pdm build",
-    "pdm publish --no-build",
-]
-
-[tool.pdm.scripts.pub]
-composite = [
-    "bumpver",
-    "pdm publish",
-]
+[tool.setuptools]
+license-files = ["LICENSE"]
