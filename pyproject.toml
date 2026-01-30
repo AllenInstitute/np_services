@@ -44,6 +44,10 @@ bump = [
     "git-changelog>=2.5.3",
 ]
 
+[tool.uv]
+package = true
+default-groups = "all"
+
 [tool.bumpversion]
 tag = true
 allow_dirty = true
