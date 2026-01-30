@@ -132,7 +132,6 @@ def initialize() -> None:
     logger.info("OpenEphys | Initializing")
     global data_files
     data_files = []
-    sync_path = None
     global initialized
     initialized = time.time()
     global folder

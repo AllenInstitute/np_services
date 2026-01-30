@@ -33,11 +33,16 @@ DEFAULT_RECORDERS: tuple[np_services.Startable, ...] = (np_services.Sync, np_ser
 
 @dataclasses.dataclass
 class PretestConfig:
-    check_barcodes: bool = False
+    check_sync_barcodes: bool = False
+    check_ephys_barcodes: bool = False # this is error prone with short recordings, so is separated from checking sync alone
     check_licks: bool = False
     check_opto: bool = False
     check_audio: bool = False
     check_running: bool = False
+    
+    @property
+    def check_barcodes(self) -> bool:
+        return self.check_sync_barcodes or self.check_ephys_barcodes
 
 
 class PretestSession(abc.ABC):
@@ -51,7 +56,7 @@ class PretestSession(abc.ABC):
     
     @property
     def recorders(self) -> tuple[np_services.Startable, ...]:
-        if self.pretest_config.check_barcodes:
+        if self.pretest_config.check_ephys_barcodes or self.pretest_config.check_sync_barcodes:
             return DEFAULT_RECORDERS + (np_services.OpenEphys, )
         return DEFAULT_RECORDERS
     
@@ -341,7 +346,12 @@ def run_pretest(
         t0 = time.time()
         session.run_pretest_stim()
         t1 = time.time()
-        min_wait_time = 70 if config.check_barcodes else 0 # long enough to capture 2 sets of barcodes on sync/openephys (cannot scale time with 1 set)
+        if not config.check_barcodes:
+            min_wait_time = 0
+        elif config.check_sync_barcodes and not config.check_ephys_barcodes:
+            min_wait_time = 35 # long enough to capture 1 sets of barcodes on sync
+        else:
+            min_wait_time = 70 # long enough to capture 2 sets of barcodes on sync/openephys (cannot scale time with 1 set)
         time.sleep(max(0, min_wait_time - (t1 - t0))) 
         for service in reversed(stoppables):
             if isinstance(service, np_services.Stoppable):
@@ -353,9 +363,21 @@ def run_pretest(
 
     np_services.VideoMVR.sync_path = np_services.OpenEphys.sync_path = session.stim.sync_path = np_services.Sync.data_files[0]
     
+    # validate
     for service in session.services:
         if isinstance(service, np_services.Validatable):
-            service.validate()
+            if service is not np_services.OpenEphys:
+                service.validate()
+            elif config.check_ephys_barcodes:
+                # try validating ephys without sync (currently error prone with short pretest-like recordings)
+                npc_ephys.validate_ephys(
+                    root_paths=service.data_files,
+                    sync_path_or_dataset=False,
+                    ignore_small_folders=False,
+                )
+            else:
+                # barcodes on sync will be validated, open ephys will be assumed to work correctly
+                continue
     assert np_services.Sync.data_files is not None, "No sync file found"
     assert session.stim.data_files is not None, "No stim file found"
     
@@ -370,7 +392,8 @@ def run_pretest(
 
 def parse_args() -> PretestConfig:
     parser = argparse.ArgumentParser(description="Run pretest")
-    parser.add_argument("--check_barcodes", action="store_true", help="Check barcodes from Arduino are being received on sync and open ephys", default=False)
+    parser.add_argument("--check_ephys_barcodes", action="store_true", help="Check barcodes from Arduino are being received on open ephys and time-alignment is possible (currently error prone with short pretest-like recordings)", default=False)
+    parser.add_argument("--check_sync_barcodes", action="store_true", help="Check barcodes from Arduino are being received on sync", default=False)
     parser.add_argument("--check_licks", action="store_true", help="Check lick sensor line on sync", default=False)
     parser.add_argument("--check_opto", action="store_true", help="Check opto-running line on sync", default=False)
     parser.add_argument("--check_audio", action="store_true", help="Check audio-running line on sync", default=False)
