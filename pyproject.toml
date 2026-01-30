@@ -55,7 +55,7 @@ commit = true
 commit_args = "-a"
 message = "Bump version: {current_version} → {new_version} [skip actions]"
 pre_commit_hooks = [
-    "uv lock --upgrade-package np_workflows",
+    "uv lock --upgrade-package np_services",
     "git-changelog -o CHANGELOG.md",
     "uv build",
     "uv publish",
@@ -78,7 +78,7 @@ release = ["bump_pub_tag"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-np_workflows = ["py.typed"]
+np_services = ["py.typed"]
 
 [tool.setuptools]
 license-files = ["LICENSE"]
