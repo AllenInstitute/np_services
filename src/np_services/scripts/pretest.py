@@ -22,7 +22,6 @@ import np_session
 import np_services
 import np_config
 import npc_sync
-import npc_ephys
 import npc_mvr
 import npc_stim
 
@@ -370,6 +369,7 @@ def run_pretest(
                 service.validate()
             elif config.check_ephys_barcodes:
                 # try validating ephys without sync (currently error prone with short pretest-like recordings)
+                import npc_ephys
                 npc_ephys.validate_ephys(
                     root_paths=service.data_files,
                     sync_path_or_dataset=False,

@@ -11,7 +11,6 @@ from typing import Any, Optional, Sequence
 import np_config
 import np_logging
 import requests
-import npc_ephys
 
 import np_services.utils as utils
 from np_services.protocols import TestError
@@ -332,6 +331,7 @@ def verify() -> None:
 
 def validate() -> None:
     logger.info(f"OpenEphys | Validating")
+    import npc_ephys
     npc_ephys.validate_ephys(
         root_paths=data_files,
         sync_path_or_dataset=sync_path,

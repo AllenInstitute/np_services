@@ -13,7 +13,6 @@ dependencies = [
     "np-config>=0.4.17",
     "tables<4.0.0,>=3.8.0",
     "npc-sync>=0.1.13",
-    "npc-ephys>=0.1.7",
     "npc-stim>=0.1.5",
     "npc-mvr>=0.1.2",
 ]
@@ -36,6 +35,7 @@ requires = ["setuptools>=61", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [dependency-groups]
+pretest = ["npc-ephys>=0.1.37"]
 task_runner = ["poethepoet>=0.33.1"]
 linting = ["black>=25.1.0", "isort>=6.0.1", "ruff>=0.11.2"]
 testing = ["mypy>=1.4.1"]
