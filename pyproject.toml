@@ -46,7 +46,7 @@ bump = [
 
 [tool.uv]
 package = true
-default-groups = "all"
+default-groups = ["task_runner", "linting", "bump"]
 
 [tool.bumpversion]
 tag = true
