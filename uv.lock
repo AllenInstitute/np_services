@@ -2220,14 +2220,13 @@ wheels = [
 
 [[package]]
 name = "np-services"
-version = "0.1.71"
+version = "0.1.72"
 source = { editable = "." }
 dependencies = [
     { name = "fabric" },
     { name = "h5py" },
     { name = "np-config" },
     { name = "np-session" },
-    { name = "npc-ephys" },
     { name = "npc-mvr" },
     { name = "npc-stim" },
     { name = "npc-sync" },
@@ -2248,6 +2247,9 @@ linting = [
     { name = "isort" },
     { name = "ruff" },
 ]
+pretest = [
+    { name = "npc-ephys" },
+]
 task-runner = [
     { name = "poethepoet" },
 ]
@@ -2261,7 +2263,6 @@ requires-dist = [
     { name = "h5py", specifier = ">=3.8.0,<4.0.0" },
     { name = "np-config", specifier = ">=0.4.17" },
     { name = "np-session", specifier = ">=0.6.40" },
-    { name = "npc-ephys", specifier = ">=0.1.7" },
     { name = "npc-mvr", specifier = ">=0.1.2" },
     { name = "npc-stim", specifier = ">=0.1.5" },
     { name = "npc-sync", specifier = ">=0.1.13" },
@@ -2281,6 +2282,7 @@ linting = [
     { name = "isort", specifier = ">=6.0.1" },
     { name = "ruff", specifier = ">=0.11.2" },
 ]
+pretest = [{ name = "npc-ephys", specifier = ">=0.1.37" }]
 task-runner = [{ name = "poethepoet", specifier = ">=0.33.1" }]
 testing = [{ name = "mypy", specifier = ">=1.4.1" }]
 
