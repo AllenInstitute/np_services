@@ -2237,7 +2237,7 @@ dependencies = [
     { name = "tables" },
 ]
 
-[package.dev-dependencies]
+[package.optional-dependencies]
 bump = [
     { name = "bump-my-version" },
     { name = "git-changelog" },
@@ -2247,9 +2247,6 @@ linting = [
     { name = "isort" },
     { name = "ruff" },
 ]
-pretest = [
-    { name = "npc-ephys" },
-]
 task-runner = [
     { name = "poethepoet" },
 ]
@@ -2257,34 +2254,36 @@ testing = [
     { name = "mypy" },
 ]
 
+[package.dev-dependencies]
+pretest = [
+    { name = "npc-ephys" },
+]
+
 [package.metadata]
 requires-dist = [
+    { name = "black", marker = "extra == 'linting'", specifier = ">=25.1.0" },
+    { name = "bump-my-version", marker = "extra == 'bump'", specifier = ">=1.1.1" },
     { name = "fabric", specifier = ">=2.7,<3.0" },
+    { name = "git-changelog", marker = "extra == 'bump'", specifier = ">=2.5.3" },
     { name = "h5py", specifier = ">=3.8.0,<4.0.0" },
+    { name = "isort", marker = "extra == 'linting'", specifier = ">=6.0.1" },
+    { name = "mypy", marker = "extra == 'testing'", specifier = ">=1.4.1" },
     { name = "np-config", specifier = ">=0.4.17" },
     { name = "np-session", specifier = ">=0.6.40" },
     { name = "npc-mvr", specifier = ">=0.1.2" },
     { name = "npc-stim", specifier = ">=0.1.5" },
     { name = "npc-sync", specifier = ">=0.1.13" },
     { name = "pandas", specifier = ">=2.0" },
+    { name = "poethepoet", marker = "extra == 'task-runner'", specifier = ">=0.33.1" },
     { name = "pyzmq" },
     { name = "requests", specifier = ">=2,<3" },
+    { name = "ruff", marker = "extra == 'linting'", specifier = ">=0.11.2" },
     { name = "tables", specifier = ">=3.8.0,<4.0.0" },
 ]
+provides-extras = ["task-runner", "linting", "testing", "bump"]
 
 [package.metadata.requires-dev]
-bump = [
-    { name = "bump-my-version", specifier = ">=1.1.1" },
-    { name = "git-changelog", specifier = ">=2.5.3" },
-]
-linting = [
-    { name = "black", specifier = ">=25.1.0" },
-    { name = "isort", specifier = ">=6.0.1" },
-    { name = "ruff", specifier = ">=0.11.2" },
-]
 pretest = [{ name = "npc-ephys", specifier = ">=0.1.37" }]
-task-runner = [{ name = "poethepoet", specifier = ">=0.33.1" }]
-testing = [{ name = "mypy", specifier = ">=1.4.1" }]
 
 [[package]]
 name = "np-session"
